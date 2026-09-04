@@ -7,32 +7,33 @@
         <StackPanel MaxWidth="640" Margin="48,56" Spacing="24" HorizontalAlignment="Center">
             <StackPanel Spacing="4">
                 <TextBlock Text="MarkPad" Style="{ThemeResource TitleLargeTextBlockStyle}" />
-                <TextBlock Text="Markdown 파일을 열면 렌더링된 상태로 바로 편집할 수 있습니다." Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <TextBlock x:Uid="StartTagline" Text="Markdown 파일을 열면 렌더링된 상태로 바로 편집할 수 있습니다." Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <Button Command="{x:Bind ViewModel.NewDocumentCommand}" Style="{ThemeResource AccentButtonStyle}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <FontIcon Glyph="&#xE8A5;" FontSize="14" />
-                        <TextBlock Text="새 문서" />
+                        <TextBlock x:Uid="StartNewLabel" Text="새 문서" />
                         <TextBlock Text="Ctrl+N" Opacity="0.7" FontSize="12" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
                 <Button Command="{x:Bind ViewModel.OpenWithPickerCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <FontIcon Glyph="&#xE8E5;" FontSize="14" />
-                        <TextBlock Text="열기" />
+                        <TextBlock x:Uid="StartOpenLabel" Text="열기" />
                         <TextBlock Text="Ctrl+O" Opacity="0.7" FontSize="12" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
             </StackPanel>
 
             <StackPanel Spacing="8">
-                <TextBlock Text="최근 파일" Style="{ThemeResource SubtitleTextBlockStyle}" />
-                <TextBlock Text="아직 연 파일이 없습니다. .md 파일을 이 창에 끌어다 놓아도 됩니다."
+                <TextBlock x:Uid="StartRecentHeader" Text="최근 파일" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <TextBlock x:Uid="StartRecentEmpty" Text="아직 연 파일이 없습니다. .md 파일을 이 창에 끌어다 놓아도 됩니다."
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                            Visibility="{x:Bind HasNoRecent}" />
                 <ListView x:Name="RecentList"
+                          AutomationProperties.Name="최근 파일 목록"
                           ItemsSource="{x:Bind ViewModel.RecentFiles, Mode=OneWay}"
                           SelectionMode="None"
                           IsItemClickEnabled="True"

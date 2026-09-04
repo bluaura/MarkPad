@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
@@ -173,6 +174,7 @@ public sealed partial class MainWindow : Window, IDialogService
             Tag = vm,
         };
         ToolTipService.SetToolTip(item, vm.Path ?? vm.Title);
+        AutomationProperties.SetName(item, vm.Title); // PRD 4.3: screen readers announce the file name
         _tabViews[vm] = (item, view);
         ContentHost.Children.Add(view);
         Tabs.TabItems.Insert(Math.Min(index, Tabs.TabItems.Count), item);
@@ -218,6 +220,7 @@ public sealed partial class MainWindow : Window, IDialogService
             if (sender is DocumentViewModel vm && _tabViews.TryGetValue(vm, out var entry))
             {
                 ToolTipService.SetToolTip(entry.Item, vm.Path ?? vm.Title);
+                AutomationProperties.SetName(entry.Item, vm.Title);
             }
         }
     }
@@ -429,11 +432,11 @@ public sealed partial class MainWindow : Window, IDialogService
         var dialog = new ContentDialog
         {
             XamlRoot = Root.XamlRoot,
-            Title = "저장되지 않은 변경 사항",
-            Content = $"'{fileName}'의 변경 사항을 저장할까요?",
-            PrimaryButtonText = "저장",
-            SecondaryButtonText = "저장 안 함",
-            CloseButtonText = "취소",
+            Title = Loc.Get("Dialog_UnsavedTitle"),
+            Content = Loc.Format("Dialog_UnsavedBody", fileName),
+            PrimaryButtonText = Loc.Get("Dialog_Save"),
+            SecondaryButtonText = Loc.Get("Dialog_DontSave"),
+            CloseButtonText = Loc.Get("Dialog_Cancel"),
             DefaultButton = ContentDialogButton.Primary,
         };
         return await dialog.ShowAsync() switch

@@ -19,5 +19,10 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageVersion Include="Xunit.SkippableFact" Version="1.5.23" />
+    <PackageVersion Include="FlaUI.Core" Version="4.0.0" />
+    <PackageVersion Include="FlaUI.UIA3" Version="4.0.0" />
+    <!-- FlaUI 4 pins a vulnerable System.Drawing.Common 5.0.2; lift it (NU1904). -->
+    <PackageVersion Include="System.Drawing.Common" Version="10.0.11" />
   </ItemGroup>
 </Project>

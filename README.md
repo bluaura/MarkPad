@@ -33,6 +33,15 @@ RT_FILE=name.md npx vitest run test/debug-roundtrip.spec.ts   # 특정 코퍼스
 
 코퍼스 결과는 `docs/perf/roundtrip-report.md`에 기록된다.
 
+UI 스모크(FlaUI)는 실제 창을 띄우므로 잠금 해제된 데스크톱에서만 돌린다:
+
+```powershell
+dotnet build src/MarkPad.App/MarkPad.App.csproj -c Debug
+$env:MARKPAD_UI_TESTS = '1'; dotnet test tests/MarkPad.App.UiTests
+```
+
+패키징: `build/make-cert.ps1`(최초 1회) → `build/pack.ps1` → `out/*.msix` + `MarkPad-dev.cer`.
+
 ## 구조
 
 `docs/ARCHITECTURE.md` §2.3 참조. 요약: `src/MarkPad.App`(WinUI 3), `src/MarkPad.Core`(문서 IO 등 순수 .NET), `src/MarkPad.Editor.Web`(TypeScript, Vite → `MarkPad.App/Assets/editor`), `tests/`, `corpus/`, `docs/`.

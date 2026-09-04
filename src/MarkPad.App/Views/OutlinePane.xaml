@@ -8,9 +8,9 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <TextBlock Grid.Row="0" Text="개요" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="12,10,12,4" />
-        <TextBlock Grid.Row="1" Text="제목이 없습니다" Foreground="{ThemeResource TextFillColorTertiaryBrush}" Margin="12,4" Visibility="{x:Bind ViewModel.IsEmpty, Mode=OneWay}" />
-        <ListView Grid.Row="1" ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}" SelectionMode="None" IsItemClickEnabled="True" ItemClick="OnItemClick">
+        <TextBlock x:Uid="OutlineHeader" Grid.Row="0" Text="개요" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="12,10,12,4" />
+        <TextBlock x:Uid="OutlineEmpty" Grid.Row="1" Text="제목이 없습니다" Foreground="{ThemeResource TextFillColorTertiaryBrush}" Margin="12,4" Visibility="{x:Bind ViewModel.IsEmpty, Mode=OneWay}" />
+        <ListView Grid.Row="1" AutomationProperties.Name="개요 제목 목록" ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}" SelectionMode="None" IsItemClickEnabled="True" ItemClick="OnItemClick">
             <ListView.ItemContainerStyle>
                 <Style TargetType="ListViewItem">
                     <Setter Property="MinHeight" Value="28" />

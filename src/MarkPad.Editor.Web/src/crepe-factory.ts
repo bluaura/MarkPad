@@ -10,6 +10,7 @@ import { formatKeymap } from './plugins/format-keymap'
 import { frontmatterPlugin } from './plugins/frontmatter'
 import { outlinePlugin } from './plugins/outline'
 import { imageAltPlugin } from './plugins/image-alt'
+import { imagePropsPlugin } from './plugins/image-props'
 import { linkClickPlugin } from './plugins/link-click'
 
 let mermaidSeq = 0
@@ -106,6 +107,7 @@ export function buildCrepe(root: HTMLElement, defaultValue: string, settings: Ed
     crepe.editor.use(linkClickPlugin)
     crepe.editor.use(contextBarPlugin)
     crepe.editor.use(outlinePlugin)
+    crepe.editor.use(imagePropsPlugin)
   }
 
   // Serialization style for NEW/changed blocks (PRD F-SET-04). Untouched blocks keep the original (§5).

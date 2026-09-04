@@ -104,7 +104,7 @@ public sealed partial class DocumentViewModel : ObservableObject, IAsyncDisposab
 
     public string DisplayTitle => (IsDirty ? "● " : string.Empty) + Title;
 
-    public string SaveStateLabel => IsReadOnly ? "읽기 전용" : IsUserReadOnly ? "읽기 전용 (토글)" : IsDirty ? "● 수정됨" : "저장됨 ✓";
+    public string SaveStateLabel => IsReadOnly || IsUserReadOnly ? Loc.Get("Status_ReadOnly") : IsDirty ? Loc.Get("Status_Modified") : Loc.Get("Status_Saved");
 
     public bool IsPlainText => Document.Kind == DocumentKind.PlainText;
 

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="StartTagline.Text" xml:space="preserve"><value>Open a Markdown file and edit it rendered, right away.</value></data>
+  <data name="StartNewLabel.Text" xml:space="preserve"><value>New document</value></data>
+  <data name="StartOpenLabel.Text" xml:space="preserve"><value>Open</value></data>
+  <data name="StartRecentHeader.Text" xml:space="preserve"><value>Recent files</value></data>
+  <data name="StartRecentEmpty.Text" xml:space="preserve"><value>No files yet. You can also drop a .md file onto this window.</value></data>
+
+  <data name="MenuNew.Text" xml:space="preserve"><value>New document (Ctrl+N)</value></data>
+  <data name="MenuOpen.Text" xml:space="preserve"><value>Open… (Ctrl+O)</value></data>
+  <data name="MenuSave.Text" xml:space="preserve"><value>Save (Ctrl+S)</value></data>
+  <data name="MenuSaveAs.Text" xml:space="preserve"><value>Save as… (Ctrl+Shift+S)</value></data>
+  <data name="MenuExport.Text" xml:space="preserve"><value>Export HTML/PDF… (Ctrl+Shift+E)</value></data>
+  <data name="MenuPrint.Text" xml:space="preserve"><value>Print… (Ctrl+P)</value></data>
+  <data name="MenuCopyRich.Text" xml:space="preserve"><value>Copy as rich text</value></data>
+  <data name="MenuOutline.Text" xml:space="preserve"><value>Outline pane (Ctrl+Shift+O)</value></data>
+  <data name="MenuSidebar.Text" xml:space="preserve"><value>File sidebar (Ctrl+Shift+B)</value></data>
+  <data name="MenuToolbar.Text" xml:space="preserve"><value>Hide toolbar (Ctrl+Shift+T)</value></data>
+  <data name="MenuReadOnly.Text" xml:space="preserve"><value>Toggle read-only</value></data>
+  <data name="MenuSettings.Text" xml:space="preserve"><value>Settings… (Ctrl+,)</value></data>
+
+  <data name="OutlineHeader.Text" xml:space="preserve"><value>Outline</value></data>
+  <data name="OutlineEmpty.Text" xml:space="preserve"><value>No headings</value></data>
+  <data name="SidebarHeader.Text" xml:space="preserve"><value>Files</value></data>
+  <data name="SidebarEmpty.Text" xml:space="preserve"><value>Save the document to show its folder</value></data>
+
+  <data name="Dialog_UnsavedTitle" xml:space="preserve"><value>Unsaved changes</value></data>
+  <data name="Dialog_UnsavedBody" xml:space="preserve"><value>Save changes to '{0}'?</value></data>
+  <data name="Dialog_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Dialog_DontSave" xml:space="preserve"><value>Don't save</value></data>
+  <data name="Dialog_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Status_Saved" xml:space="preserve"><value>Saved ✓</value></data>
+  <data name="Status_Modified" xml:space="preserve"><value>● Modified</value></data>
+  <data name="Status_ReadOnly" xml:space="preserve"><value>Read-only</value></data>
+  <data name="Title_Untitled" xml:space="preserve"><value>Untitled</value></data>
+</root>

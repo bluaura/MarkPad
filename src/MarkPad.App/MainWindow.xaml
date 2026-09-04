@@ -64,7 +64,7 @@
         </Grid.KeyboardAccelerators>
 
         <!-- Row 0: tabs in the title bar (PRD 4.1) -->
-        <TabView x:Name="Tabs"
+        <TabView x:Name="Tabs" AutomationProperties.Name="문서 탭"
                  Grid.Row="0"
                  VerticalAlignment="Top"
                  TabWidthMode="SizeToContent"
@@ -99,21 +99,21 @@
                     <FontIcon Glyph="&#xE700;" FontSize="16" />
                     <DropDownButton.Flyout>
                         <MenuFlyout>
-                            <MenuFlyoutItem Text="새 문서 (Ctrl+N)" Command="{x:Bind ViewModel.NewDocumentCommand}" />
-                            <MenuFlyoutItem Text="열기… (Ctrl+O)" Command="{x:Bind ViewModel.OpenWithPickerCommand}" />
-                            <MenuFlyoutItem Text="저장 (Ctrl+S)" Command="{x:Bind ViewModel.SaveCommand}" />
-                            <MenuFlyoutItem Text="다른 이름으로 저장… (Ctrl+Shift+S)" Command="{x:Bind ViewModel.SaveAsCommand}" />
+                            <MenuFlyoutItem x:Uid="MenuNew" Text="새 문서 (Ctrl+N)" Command="{x:Bind ViewModel.NewDocumentCommand}" />
+                            <MenuFlyoutItem x:Uid="MenuOpen" Text="열기… (Ctrl+O)" Command="{x:Bind ViewModel.OpenWithPickerCommand}" />
+                            <MenuFlyoutItem x:Uid="MenuSave" Text="저장 (Ctrl+S)" Command="{x:Bind ViewModel.SaveCommand}" />
+                            <MenuFlyoutItem x:Uid="MenuSaveAs" Text="다른 이름으로 저장… (Ctrl+Shift+S)" Command="{x:Bind ViewModel.SaveAsCommand}" />
                             <MenuFlyoutSeparator />
-                            <MenuFlyoutItem Text="내보내기 HTML/PDF… (Ctrl+Shift+E)" Command="{x:Bind ViewModel.ExportCommand}" />
-                            <MenuFlyoutItem Text="인쇄… (Ctrl+P)" Command="{x:Bind ViewModel.PrintCommand}" />
-                            <MenuFlyoutItem Text="서식 있는 텍스트로 복사" Command="{x:Bind ViewModel.CopyRichCommand}" />
+                            <MenuFlyoutItem x:Uid="MenuExport" Text="내보내기 HTML/PDF… (Ctrl+Shift+E)" Command="{x:Bind ViewModel.ExportCommand}" />
+                            <MenuFlyoutItem x:Uid="MenuPrint" Text="인쇄… (Ctrl+P)" Command="{x:Bind ViewModel.PrintCommand}" />
+                            <MenuFlyoutItem x:Uid="MenuCopyRich" Text="서식 있는 텍스트로 복사" Command="{x:Bind ViewModel.CopyRichCommand}" />
                             <MenuFlyoutSeparator />
-                            <ToggleMenuFlyoutItem Text="개요 패널 (Ctrl+Shift+O)" IsChecked="{x:Bind ViewModel.ShowOutline, Mode=TwoWay}" />
-                            <ToggleMenuFlyoutItem Text="파일 사이드바 (Ctrl+Shift+B)" IsChecked="{x:Bind ViewModel.ShowSidebar, Mode=TwoWay}" />
-                            <MenuFlyoutItem Text="툴바 숨기기 (Ctrl+Shift+T)" Command="{x:Bind ViewModel.ToggleToolbarCommand}" />
-                            <MenuFlyoutItem Text="읽기 전용 토글" Command="{x:Bind ViewModel.ToggleReadOnlyCommand}" />
+                            <ToggleMenuFlyoutItem x:Uid="MenuOutline" Text="개요 패널 (Ctrl+Shift+O)" IsChecked="{x:Bind ViewModel.ShowOutline, Mode=TwoWay}" />
+                            <ToggleMenuFlyoutItem x:Uid="MenuSidebar" Text="파일 사이드바 (Ctrl+Shift+B)" IsChecked="{x:Bind ViewModel.ShowSidebar, Mode=TwoWay}" />
+                            <MenuFlyoutItem x:Uid="MenuToolbar" Text="툴바 숨기기 (Ctrl+Shift+T)" Command="{x:Bind ViewModel.ToggleToolbarCommand}" />
+                            <MenuFlyoutItem x:Uid="MenuReadOnly" Text="읽기 전용 토글" Command="{x:Bind ViewModel.ToggleReadOnlyCommand}" />
                             <MenuFlyoutSeparator />
-                            <MenuFlyoutItem Text="설정… (Ctrl+,)" Command="{x:Bind ViewModel.OpenSettingsCommand}" />
+                            <MenuFlyoutItem x:Uid="MenuSettings" Text="설정… (Ctrl+,)" Command="{x:Bind ViewModel.OpenSettingsCommand}" />
                         </MenuFlyout>
                     </DropDownButton.Flyout>
                 </DropDownButton>
@@ -147,8 +147,8 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <views:FileSidebar x:Name="SidebarPane" Grid.Column="0" Width="240" Visibility="{x:Bind ViewModel.ShowSidebar, Mode=OneWay}" />
-            <views:OutlinePane x:Name="OutlinePaneControl" Grid.Column="1" Width="220" Visibility="{x:Bind ViewModel.ShowOutline, Mode=OneWay}" />
+            <views:FileSidebar x:Name="SidebarPane" AutomationProperties.Name="파일 사이드바" Grid.Column="0" Width="240" Visibility="{x:Bind ViewModel.ShowSidebar, Mode=OneWay}" />
+            <views:OutlinePane x:Name="OutlinePaneControl" AutomationProperties.Name="개요 패널" Grid.Column="1" Width="220" Visibility="{x:Bind ViewModel.ShowOutline, Mode=OneWay}" />
             <Grid x:Name="ContentHost" Grid.Column="2" />
         </Grid>
 
