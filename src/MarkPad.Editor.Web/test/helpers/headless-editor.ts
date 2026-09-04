@@ -1,13 +1,14 @@
 /**
- * Creates the same Crepe configuration main.ts uses, inside jsdom, so tests exercise the real
- * remark parser/serializer plus every Crepe schema extension (image-block, latex, table, …).
+ * Creates the same Crepe configuration the app uses (crepe-factory.ts), inside jsdom, so tests
+ * exercise the real remark parser/serializer plus every Crepe schema extension.
  */
-import { Crepe } from '@milkdown/crepe'
-import { editorViewCtx, parserCtx, serializerCtx } from '@milkdown/kit/core'
+import type { Crepe } from '@milkdown/crepe'
+import { parserCtx, serializerCtx } from '@milkdown/kit/core'
+import { buildCrepe, defaultEditorSettings } from '../../src/crepe-factory'
 
 export interface HeadlessEditor {
   crepe: Crepe
-  /** Parse markdown into the editor schema and serialize it back (what crepe.getMarkdown() does on load). */
+  /** Parse markdown into the editor schema and serialize it back (what crepe.getMarkdown() does after load). */
   roundTripMarkdown(markdown: string): Promise<string>
   destroy(): Promise<void>
 }
@@ -51,20 +52,7 @@ export async function createHeadlessEditor(): Promise<HeadlessEditor> {
   const root = document.createElement('div')
   document.body.appendChild(root)
 
-  const crepe = new Crepe({
-    root,
-    defaultValue: '',
-    features: {
-      [Crepe.Feature.Toolbar]: false,
-      [Crepe.Feature.TopBar]: false,
-      [Crepe.Feature.BlockEdit]: false,
-      [Crepe.Feature.AI]: false,
-      [Crepe.Feature.Placeholder]: false,
-      [Crepe.Feature.Cursor]: false,
-      [Crepe.Feature.LinkTooltip]: false,
-      [Crepe.Feature.Latex]: true,
-    },
-  })
+  const crepe = buildCrepe(root, '', defaultEditorSettings, { headless: true })
   await crepe.create()
 
   return {
@@ -73,11 +61,7 @@ export async function createHeadlessEditor(): Promise<HeadlessEditor> {
       return crepe.editor.action((ctx) => {
         const parse = ctx.get(parserCtx)
         const serialize = ctx.get(serializerCtx)
-        const doc = parse(markdown)
-        // Mirror crepe.getMarkdown(): it serializes the current view state, so load the parsed doc into the view.
-        const view = ctx.get(editorViewCtx)
-        void view
-        return serialize(doc)
+        return serialize(parse(markdown))
       })
     },
     destroy: () => crepe.destroy().then(() => undefined),

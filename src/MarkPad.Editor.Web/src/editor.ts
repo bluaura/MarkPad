@@ -1,10 +1,11 @@
-import { Crepe } from '@milkdown/crepe'
+import type { Crepe } from '@milkdown/crepe'
 import type { Ctx } from '@milkdown/kit/ctx'
-import { editorViewCtx, remarkStringifyOptionsCtx } from '@milkdown/kit/core'
+import { editorViewCtx } from '@milkdown/kit/core'
 import type { Node as ProseNode } from '@milkdown/kit/prose/model'
 import type { EditorView } from '@milkdown/kit/prose/view'
 import { bridge } from './bridge'
 import type { AssetSaveResult, ChangedEvent, EditorSettings } from './bridge-types'
+import { buildCrepe } from './crepe-factory'
 import { resolveImageUrl, setAllowRemoteImages } from './plugins/image-resolver'
 import { computeSelectionContext, computeStats, currentLine } from './selection'
 
@@ -50,43 +51,9 @@ export async function createEditor(root: HTMLElement, markdown: string, settings
   root.replaceChildren()
   setAllowRemoteImages(settings.allowRemoteImages)
 
-  const crepe = new Crepe({
-    root,
-    defaultValue: markdown,
-    features: {
-      [Crepe.Feature.Toolbar]: false, // native XAML toolbar (ADR-02)
-      [Crepe.Feature.TopBar]: false,
-      [Crepe.Feature.BlockEdit]: false, // revisit in P2 (T-61)
-      [Crepe.Feature.AI]: false,
-      [Crepe.Feature.Placeholder]: true,
-      [Crepe.Feature.Latex]: settings.markdown.extMath,
-    },
-    featureConfigs: {
-      [Crepe.Feature.ImageBlock]: {
-        onUpload: uploadToHost,
-        inlineOnUpload: uploadToHost,
-        blockOnUpload: uploadToHost,
-        proxyDomURL: resolveImageUrl,
-      },
-      [Crepe.Feature.Placeholder]: {
-        text: '내용을 입력하세요…',
-        mode: 'doc',
-      },
-    },
-  })
-
-  // Serialization style for NEW/changed blocks (PRD F-SET-04). Untouched blocks keep the original (§5).
-  crepe.editor.config((ctx) => {
-    ctx.update(remarkStringifyOptionsCtx, (prev) => ({
-      ...prev,
-      bullet: settings.markdown.bullet,
-      emphasis: settings.markdown.emphasis,
-      strong: '*' as const,
-      listItemIndent: settings.markdown.listIndent >= 4 ? ('tab' as const) : ('one' as const),
-      fences: true,
-      rule: '-' as const,
-      ruleRepetition: 3,
-    }))
+  const crepe = buildCrepe(root, markdown, settings, {
+    onUpload: uploadToHost,
+    proxyDomURL: resolveImageUrl,
   })
 
   let loadedDoc: ProseNode | null = null

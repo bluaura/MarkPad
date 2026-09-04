@@ -306,7 +306,8 @@ WYSIWYG 엔진은 문서를 AST로 파싱 후 재직렬화하므로, 편집하�
 | 2026-09-04 | front matter 편집기: 중첩 객체까지 GUI 트리로 지원 | 블로그·정적 사이트 md의 메타데이터가 중첩 구조인 경우가 많음 |
 | 2026-09-04 | `.txt` 기본 앱 미등록 | 메모장 역할 유지, `.md`만 연결 |
 | 2026-09-04 | `==하이라이트==` 기본 OFF | GFM 비표준 — 다른 뷰어와 동일하게 raw 표시, 설정으로 ON 가능 |
-| 2026-09-04 | .NET 10 LTS + Windows App SDK 2.4, Milkdown 7.21 (Crepe 기반) | 2028년까지 LTS 지원, WASDK 2.x TitleBar·Picker 개선. 상세는 ARCHITECTURE.md ADR-02/09 |
+| 2026-09-04 | .NET 10 LTS + Windows App SDK 2.4, Milkdown 7.22 (Crepe 기반) | 2028년까지 LTS 지원, WASDK 2.x TitleBar·Picker 개선. 상세는 ARCHITECTURE.md ADR-02/09 |
+| 2026-09-04 | **M0 Go**: Milkdown 확정. Round-trip 코퍼스 103/103 diff=0(분리 1건: 목록 항목 첫 자식이 제목인 구조), 콜드 스타트 0.85초, 100KB 로드 0.56초, 1MB 2.7초 | ADR-011. 한글 IME(R2)는 수동 검증 후 기록 |
 
 ---
 

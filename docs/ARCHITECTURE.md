@@ -24,13 +24,13 @@
 | MVVM | CommunityToolkit.Mvvm 8.x | `ObservableObject`, `RelayCommand`, Messenger |
 | DI | Microsoft.Extensions.DependencyInjection | `App.Services` |
 | 로깅 | Microsoft.Extensions.Logging + Serilog (파일 싱크) | `%LOCALAPPDATA%\MarkPad\logs\` |
-| 편집 엔진 | **Milkdown 7.21.x** — `@milkdown/kit`, `@milkdown/crepe` | Crepe 기반 + 커스텀 플러그인 |
+| 편집 엔진 | **Milkdown 7.22.x** — `@milkdown/kit`, `@milkdown/crepe` (M0 기준 7.22.1) | Crepe 기반 + 커스텀 플러그인 |
 | Markdown 파서 (round-trip) | unified / remark-parse / remark-gfm / remark-frontmatter / remark-math / mdast-util-* | Milkdown 내부와 동일 계열 |
 | YAML | `yaml` (eemeli/yaml) 2.x | `parseDocument` — 주석·순서 보존 편집 |
 | 코드 하이라이팅 | CodeMirror 6 (Crepe CodeMirror feature 내장) | 편집 중 하이라이팅. 내보내기 시 Shiki 정적 하이라이팅 |
 | 수식 | KaTeX (Crepe Latex feature 내장) | 오프라인 번들 |
 | 다이어그램 | Mermaid 11.x | 코드블록 lang=mermaid 미리보기 NodeView |
-| 웹 빌드 | Vite 6 + TypeScript 5.x, vitest | 단일 번들 → `MarkPad.App/Assets/editor/` |
+| 웹 빌드 | Vite 7 + TypeScript 5.9, vitest 3 (jsdom) | 단일 번들 → `MarkPad.App/Assets/editor/` (CodeMirror 언어·Mermaid는 지연 청크) |
 | 패키징 | MSIX (Windows Application Packaging 프로젝트 통합, 자체 서명 인증서) | 사이드로드 |
 | 테스트 | xUnit (.NET), vitest (web), FlaUI (UI 스모크, 선택) | |
 
@@ -398,7 +398,12 @@ C# DTO는 `Bridge/BridgeMessages.cs`에 `record`로 정의하고 `System.Text.Js
 6. 파일 끝: settings.save.ensureTrailingNewline 또는 원본 EndsWithNewline 규칙 적용 (호스트)
 반환: {text, changedBlocks: B에서 대체된 인덱스 목록}
 ```
-- `canonical()`은 `list` 노드의 `spread`, `table`의 `align`, `code`의 `lang/meta/value`, 모든 `text.value`, 링크 `url/title`, 이미지 `url/alt`를 포함하고, 강조 기호(`*`/`_`)·목록 기호(`-`/`*`)·표 정렬 공백·이스케이프 차이는 무시한다(AST에는 나타나지 않으므로 자연히 무시됨).
+- `canonical()`은 ProseMirror 문서가 표현할 수 있는 것만 비교한다 (M0 코퍼스 103/103 diff=0, ADR-011 §3):
+  - 인라인 콘텐츠는 **마크 런**(텍스트 + 정렬된 마크 집합 `emphasis|strong|delete|link:url:title`)으로 평탄화 → `[_a_](u)` ≡ `_[a](u)_`, `[**b**](u)` ≡ `**[b](u)**`. 마크 경계의 공백은 마크 밖으로 옮긴 뒤 비교(`[*a* b](u)` ≡ `*[a](u)* [b](u)`).
+  - `linkReference`/`imageReference`는 문서의 `definition`으로 해석해 `link`/`image`와 같게 취급. `definition` 블록은 편집기가 생성할 수 없으므로 정렬에서 A에만 있어도 **항상 원본에서 유지**한다.
+  - 포함: `table.align`(행별 후행 빈 셀 제거 후 최대 폭으로 정규화), `code.lang/meta/value`, 링크 `url/title`, 이미지 `url/alt/title`, `heading.depth`, `listItem.checked`, `html.value`(공백·자기닫힘 정규화: `<br >` ≡ `<br />`).
+  - 무시: 강조·목록 기호, 이스케이프, 표 정렬 공백(AST에 없음), `list/listItem.spread`, 텍스트·인라인 코드 내부 공백 차이, `<br />`만 있는 표 셀.
+- 엔진 보정(`crepe-factory.ts`): `remarkPreserveEmptyLinePlugin` 제거(빈 문단/셀 `<br />` 방지), `image-alt`(alt 보존), `code-meta`(info string 보존).
 - 리스트 하나가 최상위 블록이므로, 항목 하나만 고쳐도 리스트 전체가 재직렬화된다. 이를 완화하기 위해 `list`와 `blockquote`는 **한 단계 더 내려가서 자식 단위로 재귀 정렬**한다(2단계 한정).
 - 호스트 측 후처리: EOL 복원, BOM, 끝 개행.
 - 검증: `corpus/roundtrip/*.md` 각각을 load→serializeForSave(무편집) 했을 때 `diff == 0`이어야 한다(vitest). 편집 케이스는 "H1 하나 수정 시 변경 블록 수 == 1" 류의 스냅샷 테스트.
@@ -467,7 +472,7 @@ FileSystemWatcher → 디바운스 → DocumentVM.OnExternalChange
 ## 8. 빌드·개발 환경
 
 ### 8.1 요구 도구
-Visual Studio 2026 (또는 2022 17.14+) + "Windows 애플리케이션 개발" 워크로드, .NET 10 SDK, Node.js 22 LTS, Windows 10 SDK 10.0.26100, Windows App SDK 2.4 런타임(개발 시 자동 설치).
+.NET 10 SDK (10.0.400 이상), Node.js 22 LTS, Windows App SDK 2.4 런타임. Visual Studio는 **선택**이다: XAML 컴파일러·Windows SDK 빌드 도구가 NuGet(`Microsoft.WindowsAppSDK`, `Microsoft.Windows.SDK.BuildTools`)으로 오므로 `dotnet build`만으로 빌드·실행된다. 개발 빌드는 언패키지드 + `WindowsAppSDKSelfContained=true`(`-p:Packaged=true`로 MSIX). 실행·스크린샷: `build/run-dev.ps1 [-Configuration Release] [-File x.md] [-Screenshot out.png]`. C# `LangVersion`은 `preview`(CommunityToolkit.Mvvm 8.4 partial property 요구).
 
 ### 8.2 빌드 파이프라인
 ```
@@ -513,12 +518,13 @@ MarkPad.App.csproj
 
 ---
 
-## 부록 A. M0에서 확인할 라이브러리 사실 (가정 목록)
-구현 전 실제 API로 검증하고, 불일치 시 본 문서를 갱신한다.
-1. `@milkdown/kit/preset/gfm`의 체크리스트 커맨드 실제 export 이름(`listItem.checked` 속성 토글 방식 여부).
-2. Crepe `ImageBlock` feature의 업로드 훅 시그니처(`onUpload(file) => Promise<string>`)와 일반 인라인 이미지(`image`)와의 구분.
-3. Crepe `CodeMirror` feature의 언어 목록 설정 키와 mermaid 언어에 NodeView를 덧붙이는 방법(feature 교체 vs. 확장).
-4. `listener.markdownUpdated`가 대용량 문서에서 매 트랜잭션마다 직렬화하는지 → 그렇다면 `updated`(doc 변경)만 구독하고 직렬화는 저장 시로 한정.
-5. WinUI 3 WebView2에서 `CoreWebView2Environment` 공유 방법 (`WebView2.EnsureCoreWebView2Async(env)` 지원 여부) 및 사용자 데이터 폴더 지정 (`CoreWebView2Environment.CreateWithOptionsAsync`).
-6. 한글 IME 조합 중 `markdownUpdated` 이벤트 폭주 여부와 조합 문자 깨짐 여부.
-7. Windows App SDK 2.x `FileSavePicker`는 파일을 만들지 않으므로 경로만 받아 `AtomicWriter`로 생성.
+## 부록 A. M0에서 확인할 라이브러리 사실 (가정 목록) — 2026-09-04 검증 완료
+검증 상세와 근거는 `docs/ADR/ADR-011-m0-findings.md`.
+1. **수정됨** — 체크리스트 전용 커맨드 없음. `list_item.checked`(`boolean|null`) 속성을 `tr.setNodeMarkup`으로 토글 (`commands.ts setList`).
+2. **확인됨** — `onUpload`/`inlineOnUpload`/`blockOnUpload(file) => Promise<string>` + `proxyDomURL(url)`. 단, image-block은 md `alt`에 종횡비를 쓰므로 `plugins/image-alt.ts`로 alt를 보존한다.
+3. **확인됨** — `CodeBlockConfig.languages`, `renderPreview(language, content, apply)` 훅으로 mermaid 미리보기 부착 가능(feature 교체 불필요). 코드펜스 `meta`는 `plugins/code-meta.ts`로 보존.
+4. **확인됨(직렬화함)** — `updated`만 구독, 직렬화는 저장 시에만. `changed` 150ms / `selection` 50ms 디바운스.
+5. **확인됨** — `WebView2.EnsureCoreWebView2Async(CoreWebView2Environment)` 오버로드 존재, `CreateWithOptionsAsync(null, userDataFolder, options)`.
+6. **수동 검증 대기** — `src/MarkPad.Editor.Web/test/ime-notes.md` 체크리스트.
+7. **확인됨** — `Microsoft.Windows.Storage.Pickers.FileSavePicker(WindowId).PickSaveFileAsync()` → `PickFileResult.Path`(파일 미생성).
+8. **한계(신규)** — `list_item`은 제목을 첫 자식으로 허용하지 않아 `- ### 제목` 구조가 분해됨. M2 스키마 확장 검토.

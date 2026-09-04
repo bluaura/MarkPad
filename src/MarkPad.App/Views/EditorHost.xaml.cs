@@ -75,9 +75,12 @@ public sealed partial class EditorHost : UserControl, IAsyncDisposable
         var devUrl = Environment.GetEnvironmentVariable("MARKPAD_EDITOR_URL");
         var target = string.IsNullOrWhiteSpace(devUrl) ? s_appUri : new Uri(devUrl);
         _log.LogInformation("editor: navigating to {Url}", target);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         core.Navigate(target.ToString());
 
         await _bridge.WhenReady;
+        _log.LogInformation("editor: ready after {Ms} ms (process uptime {Uptime} ms)",
+            sw.ElapsedMilliseconds, (long)(DateTime.Now - System.Diagnostics.Process.GetCurrentProcess().StartTime).TotalMilliseconds);
         Spinner.IsActive = false;
         Spinner.Visibility = Visibility.Collapsed;
     }
@@ -100,10 +103,12 @@ public sealed partial class EditorHost : UserControl, IAsyncDisposable
         }
     }
 
-    public Task LoadAsync(string textLf, string? path, bool readOnly, EditorSettingsDto settings)
+    public async Task LoadAsync(string textLf, string? path, bool readOnly, EditorSettingsDto settings)
     {
         MapDocumentFolder(path is null ? null : Path.GetDirectoryName(path));
-        return Bridge.CallAsync("doc.load", new DocLoadParams(textLf, path, readOnly, settings));
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        await Bridge.CallAsync("doc.load", new DocLoadParams(textLf, path, readOnly, settings));
+        _log.LogInformation("editor: doc.load {Chars} chars in {Ms} ms", textLf.Length, sw.ElapsedMilliseconds);
     }
 
     public async Task<string> GetMarkdownAsync()
