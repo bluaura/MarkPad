@@ -17,7 +17,10 @@ public sealed class WebEditorSurface : IEditorSurface
         _host.TextFileDropped += (_, e) => TextFileDropped?.Invoke(this, e);
         _host.FindResultChanged += (_, e) => FindResultChanged?.Invoke(this, e);
         _host.LinkOpenRequested += (_, e) => LinkOpenRequested?.Invoke(this, e);
+        _host.OutlineChanged += (_, e) => OutlineChanged?.Invoke(this, e);
     }
+
+    public event EventHandler<OutlineEvent>? OutlineChanged;
 
     public EditorHost Host => _host;
 

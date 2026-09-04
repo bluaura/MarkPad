@@ -90,6 +90,11 @@ public sealed record SelectionContext(
     public static SelectionContext Empty { get; } = new(false, false, false, false, false, 0, null, false, false, false, null, null);
 }
 public sealed record ShortcutEvent(string Key);
+public sealed record OutlineItem(int Level, string Text, int Pos);
+public sealed record OutlineEvent(OutlineItem[] Items, int Active);
+public sealed record OutlineGotoParams(int Pos);
+public sealed record BlockShowSourceParams(int? Pos);
+public sealed record CopyRichResult(string Html, string Text, string Markdown);
 public sealed record LogEvent(string Level, string Msg);
 public sealed record AssetSaveParams(string BytesBase64, string Mime, string? SuggestedName);
 public sealed record AssetSaveResult(string RelPath);
@@ -137,6 +142,11 @@ public sealed record ImageResolveResult(string Url);
 [JsonSerializable(typeof(ChangedEvent))]
 [JsonSerializable(typeof(SelectionContext))]
 [JsonSerializable(typeof(ShortcutEvent))]
+[JsonSerializable(typeof(OutlineItem))]
+[JsonSerializable(typeof(OutlineEvent))]
+[JsonSerializable(typeof(OutlineGotoParams))]
+[JsonSerializable(typeof(BlockShowSourceParams))]
+[JsonSerializable(typeof(CopyRichResult))]
 [JsonSerializable(typeof(LogEvent))]
 [JsonSerializable(typeof(AssetSaveParams))]
 [JsonSerializable(typeof(AssetSaveResult))]

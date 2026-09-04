@@ -29,6 +29,22 @@ public sealed partial class DocumentViewModel : ObservableObject, IAsyncDisposab
     private DispatcherQueueTimer? _snapshotTimer;
     private bool _snapshotBusy;
 
+    private FileWatcher? _watcher;
+
+    /// <summary>PRD F-FILE-08: the file changed on disk while this tab has unsaved edits.</summary>
+    [ObservableProperty]
+    public partial bool HasExternalChange { get; set; }
+
+    /// <summary>PRD F-VIEW-09: user-toggled read-only (independent of the encoding read-only state).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SaveStateLabel))]
+    public partial bool IsUserReadOnly { get; set; }
+
+    partial void OnIsUserReadOnlyChanged(bool value)
+    {
+        _ = Surface?.SetReadOnlyAsync(value || IsReadOnly);
+    }
+
     /// <summary>Snapshot cadence (PRD §5.5: 5초).</summary>
     public static TimeSpan SnapshotInterval { get; } = TimeSpan.FromSeconds(5);
 
@@ -88,7 +104,7 @@ public sealed partial class DocumentViewModel : ObservableObject, IAsyncDisposab
 
     public string DisplayTitle => (IsDirty ? "● " : string.Empty) + Title;
 
-    public string SaveStateLabel => IsReadOnly ? "읽기 전용" : IsDirty ? "● 수정됨" : "저장됨 ✓";
+    public string SaveStateLabel => IsReadOnly ? "읽기 전용" : IsUserReadOnly ? "읽기 전용 (토글)" : IsDirty ? "● 수정됨" : "저장됨 ✓";
 
     public bool IsPlainText => Document.Kind == DocumentKind.PlainText;
 
@@ -117,6 +133,7 @@ public sealed partial class DocumentViewModel : ObservableObject, IAsyncDisposab
             web.Host.AssetSaveHandler = SaveAssetAsync;
         }
         await LoadIntoSurfaceAsync();
+        RestartWatcher();
         SurfaceAttached?.Invoke(this, EventArgs.Empty);
     }
 
@@ -139,6 +156,67 @@ public sealed partial class DocumentViewModel : ObservableObject, IAsyncDisposab
             EnsureSnapshotTimer();
         }
     }
+
+    // ---------- external changes (PRD F-FILE-08, T-52) ----------
+
+    private void RestartWatcher()
+    {
+        _watcher?.Dispose();
+        _watcher = null;
+        if (Document.Path is null) return;
+        var queue = DispatcherQueue.GetForCurrentThread();
+        try
+        {
+            _watcher = new FileWatcher(Document, change =>
+            {
+                if (queue is null) OnExternalChange(change);
+                else queue.TryEnqueue(() => OnExternalChange(change));
+            });
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException)
+        {
+            _watcher = null;
+        }
+    }
+
+    private void OnExternalChange(ExternalChange change)
+    {
+        if (change.Kind != ExternalChangeKind.Changed)
+        {
+            Notification?.Invoke(this, $"'{Title}' 파일이 외부에서 {(change.Kind == ExternalChangeKind.Deleted ? "삭제" : "이름 변경")}되었습니다. 저장하면 다시 만들어집니다.");
+            IsDirty = true;
+            Document.IsDirty = true;
+            return;
+        }
+        if (!IsDirty)
+        {
+            _ = ReloadFromDiskAsync(); // ARCHITECTURE §6.4: quiet reload when there is nothing to lose
+        }
+        else
+        {
+            HasExternalChange = true;
+        }
+    }
+
+    [RelayCommand]
+    public async Task ReloadFromDiskAsync()
+    {
+        if (Document.Path is null || !File.Exists(Document.Path)) return;
+        try
+        {
+            var fresh = await _io.OpenAsync(Document.Path);
+            HasExternalChange = false;
+            await ReplaceDocumentAsync(fresh);
+            Notification?.Invoke(this, $"'{Title}'을(를) 디스크에서 다시 읽었습니다.");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Notification?.Invoke(this, $"다시 읽기 실패: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private void IgnoreExternalChange() => HasExternalChange = false;
 
     // ---------- crash recovery (PRD §5.5, T-42) ----------
 
@@ -241,9 +319,11 @@ public sealed partial class DocumentViewModel : ObservableObject, IAsyncDisposab
         await Surface.MarkSavedAsync();
         await Surface.SetDocumentPathAsync(Document.Path, _assets.DisplayRootFor(Document));
         IsDirty = false;
+        HasExternalChange = false;
         StopSnapshots(deleteFiles: true);
         RefreshLabels();
         OnPropertyChanged(nameof(Path));
+        if (_watcher is null || newPath is not null) RestartWatcher();
     }
 
     [RelayCommand]
@@ -321,6 +401,8 @@ public sealed partial class DocumentViewModel : ObservableObject, IAsyncDisposab
 
     public async ValueTask DisposeAsync()
     {
+        _watcher?.Dispose();
+        _watcher = null;
         StopSnapshots(deleteFiles: true);
         if (Document.Path is null) _assets.DiscardPending(Document);
         if (Surface is not null)

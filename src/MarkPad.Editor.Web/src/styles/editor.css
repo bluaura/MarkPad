@@ -84,6 +84,7 @@ body {
 
 body {
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .markpad-editor {
@@ -283,6 +284,63 @@ body {
 .mp-context-bar button:hover {
   background: var(--mp-hover);
 }
+
+/* ---- front matter block (F-VIEW-07 / F-EDIT-15) ---- */
+.mp-fm {
+  border: 1px solid var(--mp-border);
+  border-radius: 6px;
+  background: var(--mp-surface);
+  margin: 0 0 1.2em;
+  font-size: 0.9em;
+}
+.mp-fm-selected { outline: 2px solid var(--mp-accent); }
+.mp-fm-header { display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer; user-select: none; }
+.mp-fm-chevron { color: var(--mp-fg-muted); width: 1em; }
+.mp-fm-summary { flex: 1; color: var(--mp-fg-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mp-font-mono); font-size: 0.9em; }
+.mp-fm-badge { font-size: 0.75em; padding: 1px 6px; border-radius: 3px; background: var(--mp-surface-low); color: var(--mp-fg-muted); }
+.mp-fm-badge.mp-fm-warn { background: #b3261e; color: #fff; }
+.mp-fm-body { border-top: 1px solid var(--mp-border); padding: 8px 10px; user-select: none; }
+.mp-fm ::selection { background: transparent; }
+.mp-fm input, .mp-fm textarea { user-select: text; }
+.mp-fm-rows { display: flex; flex-direction: column; gap: 4px; }
+.mp-fm-row { display: grid; grid-template-columns: minmax(80px, 26%) minmax(0, 1fr) auto; gap: 6px; align-items: center; }
+.mp-fm-value { min-width: 0; }
+.mp-fm-children { margin-left: 18px; padding-left: 10px; border-left: 2px solid var(--mp-border); margin-top: 4px; }
+.mp-fm input[type='text'], .mp-fm input[type='number'], .mp-fm input[type='date'], .mp-fm input[type='datetime-local'], .mp-fm-key {
+  font: inherit; font-family: var(--mp-font-mono); font-size: 0.9em; padding: 3px 6px; border: 1px solid var(--mp-border);
+  border-radius: 4px; background: var(--mp-bg); color: var(--mp-fg); width: 100%; box-sizing: border-box;
+}
+.mp-fm-key { font-weight: 600; }
+.mp-fm-key[readonly] { background: transparent; border-color: transparent; color: var(--mp-fg-muted); }
+.mp-fm-type { color: var(--mp-fg-muted); font-family: var(--mp-font-mono); }
+.mp-fm-actions { display: flex; gap: 2px; }
+.mp-fm-btn { font: inherit; font-size: 0.85em; padding: 2px 7px; border: 1px solid var(--mp-border); border-radius: 4px; background: var(--mp-bg); color: var(--mp-fg); cursor: pointer; white-space: nowrap; }
+.mp-fm-btn:hover:not(:disabled) { background: var(--mp-hover); }
+.mp-fm-btn:disabled { opacity: 0.4; cursor: default; }
+.mp-fm-chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.mp-fm-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 4px 1px 8px; border-radius: 10px; background: var(--mp-surface-low); font-family: var(--mp-font-mono); font-size: 0.9em; }
+.mp-fm-chip .mp-fm-btn { border: 0; padding: 0 4px; background: transparent; }
+.mp-fm-chip-input { width: 120px !important; }
+.mp-fm-add, .mp-fm-foot { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.mp-fm-foot { justify-content: space-between; border-top: 1px dashed var(--mp-border); padding-top: 6px; }
+.mp-fm-textarea { width: 100%; box-sizing: border-box; font-family: var(--mp-font-mono); font-size: 0.9em; padding: 6px; border: 1px solid var(--mp-border); border-radius: 4px; background: var(--mp-bg); color: var(--mp-fg); }
+.mp-fm-warning { color: #b3261e; margin-bottom: 6px; }
+
+/* ---- block source panel (F-EDIT-12) ---- */
+.mp-source-panel {
+  position: absolute; z-index: 30; display: flex; flex-direction: column; gap: 6px; padding: 8px;
+  background: var(--mp-surface); border: 1px solid var(--mp-border); border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  font: 12px var(--mp-font-family);
+}
+.mp-source-title { color: var(--mp-fg-muted); }
+.mp-source-text { font-family: var(--mp-font-mono); font-size: 13px; padding: 6px; border: 1px solid var(--mp-border); border-radius: 4px; background: var(--mp-bg); color: var(--mp-fg); resize: vertical; }
+.mp-source-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.mp-source-actions button { font: inherit; padding: 4px 10px; border: 1px solid var(--mp-border); border-radius: 4px; background: var(--mp-bg); color: var(--mp-fg); cursor: pointer; }
+.mp-source-actions button:first-child { background: var(--mp-accent); color: #fff; border-color: var(--mp-accent); }
+
+/* ---- mermaid preview ---- */
+.mp-mermaid-preview svg { max-width: 100%; height: auto; }
+.mp-mermaid-error { color: #b3261e; font-family: var(--mp-font-mono); font-size: 0.85em; white-space: pre-wrap; }
 
 /* Dev-mode banner when running outside WebView2 */
 .markpad-devbar {

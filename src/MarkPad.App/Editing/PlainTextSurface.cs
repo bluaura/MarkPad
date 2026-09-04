@@ -31,6 +31,7 @@ public sealed class PlainTextSurface : IEditorSurface
     public event EventHandler<ShortcutEvent>? ShortcutRequested;
     public event EventHandler<DroppedTextFile>? TextFileDropped;
     public event EventHandler<string>? LinkOpenRequested;
+    public event EventHandler<OutlineEvent>? OutlineChanged;
 #pragma warning restore CS0067
 
     private string _findQuery = string.Empty;

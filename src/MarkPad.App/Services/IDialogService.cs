@@ -39,5 +39,11 @@ public interface IDialogService
 
     Task<bool> ConfirmAsync(string title, string message, string primaryText);
 
+    /// <summary>Settings page (F-SET-01~05); returns true when the user saved.</summary>
+    Task<bool> ShowSettingsAsync();
+
+    /// <summary>PRD F-EXP-04: put HTML + plain text on the clipboard.</summary>
+    void SetClipboardRich(string html, string text);
+
     void ShowInfo(string message, bool isError = false);
 }

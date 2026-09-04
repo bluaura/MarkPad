@@ -282,7 +282,7 @@ bridge.emit('ready', { version })
 | `data:` | 그대로 |
 
 #### Front matter 플러그인
-- 파서: `remark-frontmatter(['yaml'])` → mdast `yaml` 노드 → ProseMirror `frontmatter` 노드(attrs: `{ raw: string }`), 문서 첫 블록에만 허용(스키마 `content: "frontmatter? block+"`).
+- 파서: `$remark('remark-frontmatter', …, ['yaml'])`로 Milkdown의 remark 파이프라인(파싱·직렬화 양방향)에 등록 → mdast `yaml` 노드 → ProseMirror `frontmatter` 노드(attrs: `{ raw: string }`, `group: block`, atom). 구현(T-48)에서는 doc 스키마를 바꾸지 않고 block 그룹으로 두었다(remark-frontmatter가 문서 첫 블록에서만 yaml을 만들므로 위치는 자연히 보장됨). 설정 `frontMatter=false`면 플러그인을 등록하지 않고 `frontmatter.ts`가 `---` 블록을 편집기 밖에서 원문 그대로 보존한다.
 - 직렬화: `---\n{raw}\n---\n`.
 - NodeView (plain DOM, 프레임워크 없음):
   - 접힘 헤더: 상위 3개 키 `key: value` 요약, 클릭 시 펼침.
@@ -354,7 +354,9 @@ bridge.emit('ready', { version })
 | `doc.rewriteAssetPaths` | `{map: {old: new}}` | `{count}` | 첫 저장 시 pending 이미지 이름 충돌로 바뀐 경로만 재작성 (F-IMG-04) |
 | `table.*` | `addRowAbove/Below, addColLeft/Right, delRow, delCol, align{dir}, delete, toggleHeader` | | F-EDIT-07 |
 | `find.set/next/prev/replace/replaceAll/clear` | `{query, caseSensitive, wholeWord}` / `{replacement}` | `{count, index}` (+`replaced`) | F-EDIT-11. 전체 단어는 `\p{L}\p{N}` 룩어라운드(한글 대응). `replaceAll`은 트랜잭션 1개 → undo 1회 |
-| `outline.goto` | `{pos}` | | F-VIEW-05 |
+| `outline.goto` / `outline.refresh` | `{pos}` / — | | F-VIEW-05. `refresh`는 `outline` 이벤트를 즉시 재발송(탭 전환 시) |
+| `block.showSource` / `block.closeSource` | `{pos?}` | | F-EDIT-12. 커서가 있는 최상위 블록만 직렬화해 인라인 textarea로 편집, 적용 시 재파싱 후 블록 치환. 호스트는 WebView2 `ContextMenuRequested`로 "블록 소스 편집" 항목을 추가(기본 잘라내기/복사/붙여넣기 유지, 브라우저 항목 제거) |
+| `edit.copyRich` | — | `{html, text, markdown}` | F-EXP-04. 선택 영역(없으면 문서 전체)을 `renderHtml`로 변환, 호스트가 `DataPackage`(HTML+텍스트)로 클립보드에 넣음 |
 | `view.setTheme` | `{mode, font…, zoom}` | | F-VIEW-08 |
 | `view.focus` / `view.scrollToTop` | | | |
 | `block.showSource` | `{pos}` | | F-EDIT-12 |
@@ -369,7 +371,7 @@ bridge.emit('ready', { version })
 | evt | `ready` | `{version}` |
 | evt | `changed` | `{dirty, words, chars, line}` (150ms 디바운스) |
 | evt | `selection` | `{bold, italic, strike, code, highlight, heading, list, blockquote, inTable, inCode, codeLang, link}` |
-| evt | `outline` | `[{level, text, pos}]` |
+| evt | `outline` | `{items: [{level, text, pos}], active}` — 200ms 디바운스, `active`는 커서가 속한 제목 인덱스 |
 | evt | `find.result` | `{count, index}` |
 | evt | `shortcut` | `{key: "ctrl+s" …}` — 앱 단축키 위임 |
 | evt | `log` | `{level, msg}` |

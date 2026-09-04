@@ -7,6 +7,8 @@ import { codeMetaPlugin } from './plugins/code-meta'
 import { contextBarPlugin } from './plugins/context-bar'
 import { findPlugin } from './plugins/find'
 import { formatKeymap } from './plugins/format-keymap'
+import { frontmatterPlugin } from './plugins/frontmatter'
+import { outlinePlugin } from './plugins/outline'
 import { imageAltPlugin } from './plugins/image-alt'
 import { linkClickPlugin } from './plugins/link-click'
 
@@ -99,9 +101,11 @@ export function buildCrepe(root: HTMLElement, defaultValue: string, settings: Ed
   crepe.editor.use(codeMetaPlugin)
   crepe.editor.use(formatKeymap)
   crepe.editor.use(findPlugin)
+  if (settings.markdown.frontMatter) crepe.editor.use(frontmatterPlugin)
   if (!headless) {
     crepe.editor.use(linkClickPlugin)
     crepe.editor.use(contextBarPlugin)
+    crepe.editor.use(outlinePlugin)
   }
 
   // Serialization style for NEW/changed blocks (PRD F-SET-04). Untouched blocks keep the original (§5).

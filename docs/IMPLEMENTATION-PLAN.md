@@ -139,6 +139,8 @@
 | T-59 | UI 스모크 테스트 | `tests/MarkPad.App.UiTests`(FlaUI): 열기·편집·저장·탭·내보내기 5 시나리오 | CI에서 통과 | T-44 | M | §8.3 |
 | T-60 | 접근성·현지화 마무리 | 고대비, 키보드 포커스 순서, `Resources.resw` ko/en | Accessibility Insights 치명 이슈 0 | T-50 | S | 4.3 |
 
+**M2 진행 상황 (2026-09-04)**: T-45 개요 패널(제목 클릭 이동·현재 위치 강조 확인), T-46 수식 툴바·설정 토글, T-47 Mermaid 미리보기, T-48 front matter 노드(`remark-frontmatter` 양방향, 코퍼스 103/103 유지, `frontmatter-node.spec`), T-49 GUI 편집기(plain DOM 트리: 문자열/숫자/불리언/날짜 컨트롤, 스칼라 배열 칩, 중첩 map/seq, 키 추가·삭제·이름변경·순서, 앵커/별칭/태그/다중문서/오류 시 raw 폴백 — `frontmatter.spec` 5건, 화면 확인), T-50 설정 대화상자(Ctrl+,) + `settings.json` 외부 편집 감시, T-51 자동 저장, T-52 외부 변경 감지(`FileWatcher`, 자기 저장 필터 xUnit, dirty면 InfoBar/아니면 조용히 재로드), T-53 파일 사이드바(지연 로드 TreeView, 더블클릭 열기), T-54 파일 연결(매니페스트, T-44에서 완료), T-55 블록 소스 편집(WebView2 컨텍스트 메뉴 항목 + 인라인 textarea), T-56 인쇄, T-57 서식 복사(HTML+텍스트 DataPackage), T-58 읽기 전용 토글. **미착수**: T-58b 이미지 속성 편집, T-59 FlaUI, T-60 접근성·현지화(resw). **수동 확인 필요**: 자동 저장 타이머, 설정 대화상자 항목 반영, 블록 소스 편집 컨텍스트 메뉴, 서식 복사 붙여넣기.
+
 **M3 후보(P2)**: T-61 블록 드래그(Crepe BlockEdit 재활성 검토), T-62 맞춤법, T-63 DOCX, T-64 이미지 크기 조절, T-65 대용량 가상화.
 
 ---

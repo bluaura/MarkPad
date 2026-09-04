@@ -35,7 +35,8 @@ export function registerDocHandlers(): void {
 
     applyTheme(p.settings.theme)
     const text = p.text.replace(/\r\n?/g, '\n')
-    const fm = p.settings.markdown.frontMatter ? splitFrontMatter(text) : { raw: '', body: text }
+    // With the front matter plugin on (T-48) the editor owns the `---` block; otherwise keep it outside verbatim.
+    const fm = p.settings.markdown.frontMatter ? { raw: '', body: text } : splitFrontMatter(text)
 
     const editor = await createEditor(editorRoot(), fm.body, p.settings)
     if (p.readonly) editor.setReadonly(true)
@@ -52,7 +53,7 @@ export function registerDocHandlers(): void {
     const s = requireSession()
     const p = raw as DocSerializeParams
     const original = (p?.original ?? '').replace(/\r\n?/g, '\n')
-    const originalSplit = s.settings.markdown.frontMatter ? splitFrontMatter(original) : { raw: '', body: original }
+    const originalSplit = s.settings.markdown.frontMatter ? { raw: '', body: original } : splitFrontMatter(original)
     const current = s.editor.getMarkdown()
     const result = roundTrip(originalSplit.body, current)
     // Front matter is opaque to the editor in this milestone: keep the loaded raw block verbatim.

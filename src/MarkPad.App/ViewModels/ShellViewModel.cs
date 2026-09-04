@@ -53,7 +53,12 @@ public sealed partial class ShellViewModel : ObservableObject
         _dialogs = dialogs;
         _log = log;
         ShowToolbar = settings.Current.Ui.ShowToolbar;
+        ShowOutline = settings.Current.Ui.ShowOutline;
+        ShowSidebar = settings.Current.Ui.ShowFileSidebar;
         Find = new FindViewModel(() => SelectedTab?.Surface);
+        Sidebar.OpenRequested += (_, path) => _ = OpenFilesAsync([path]);
+        ConfigureAutosave();
+        _settings.Changed += (_, _) => ConfigureAutosave();
         Toolbar.ShowHighlight = settings.Current.Markdown.ExtHighlight;
         Toolbar.ImageInsertRequested += (_, _) => _ = InsertImageAsync();
         Tabs.CollectionChanged += OnTabsChanged;
@@ -70,6 +75,115 @@ public sealed partial class ShellViewModel : ObservableObject
     public ToolbarViewModel Toolbar { get; } = new();
 
     public FindViewModel Find { get; }
+
+    public OutlineViewModel Outline { get; } = new();
+
+    public FileSidebarViewModel Sidebar { get; } = new();
+
+    [ObservableProperty]
+    public partial bool ShowOutline { get; set; }
+
+    [ObservableProperty]
+    public partial bool ShowSidebar { get; set; }
+
+    partial void OnShowOutlineChanged(bool value)
+    {
+        Outline.IsOpen = value;
+        _ = _settings.UpdateAsync(s => s.Ui.ShowOutline = value);
+    }
+
+    partial void OnShowSidebarChanged(bool value)
+    {
+        Sidebar.IsOpen = value;
+        _ = _settings.UpdateAsync(s => s.Ui.ShowFileSidebar = value);
+    }
+
+    [RelayCommand]
+    private void ToggleOutline() => ShowOutline = !ShowOutline;
+
+    [RelayCommand]
+    private void ToggleSidebar() => ShowSidebar = !ShowSidebar;
+
+    // ---------- autosave (PRD F-FILE-07, T-51) ----------
+
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _autosave;
+
+    private void ConfigureAutosave()
+    {
+        _autosave?.Stop();
+        _autosave = null;
+        var s = _settings.Current.Save;
+        if (!s.Autosave) return;
+        var queue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+        if (queue is null) return;
+        _autosave = queue.CreateTimer();
+        _autosave.Interval = TimeSpan.FromSeconds(Math.Max(5, s.AutosaveIntervalSec));
+        _autosave.IsRepeating = true;
+        _autosave.Tick += async (_, _) => await AutosaveTickAsync();
+        _autosave.Start();
+    }
+
+    private async Task AutosaveTickAsync()
+    {
+        foreach (var t in Tabs.Where(t => t.IsDirty && t.Path is not null && !t.Document.IsReadOnly && !t.IsUserReadOnly && !t.HasExternalChange).ToList())
+        {
+            try
+            {
+                await t.SaveAsync();
+                _log.LogInformation("autosaved {Path}", t.Path);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BridgeException)
+            {
+                _log.LogWarning(ex, "autosave failed: {Path}", t.Path);
+                _dialogs.ShowInfo($"자동 저장 실패: {t.Title} — {ex.Message}", isError: true);
+            }
+        }
+    }
+
+    // ---------- settings (PRD F-SET, T-50) ----------
+
+    [RelayCommand]
+    private async Task OpenSettingsAsync()
+    {
+        if (await _dialogs.ShowSettingsAsync()) ApplySettings();
+    }
+
+    /// <summary>Live-apply what can change without reloading; markdown extensions apply to newly opened tabs.</summary>
+    public void ApplySettings()
+    {
+        ShowToolbar = _settings.Current.Ui.ShowToolbar;
+        Toolbar.ShowHighlight = _settings.Current.Markdown.ExtHighlight;
+        ConfigureAutosave();
+        foreach (var t in Tabs) _ = t.ApplyThemeAsync();
+    }
+
+    // ---------- read-only toggle (PRD F-VIEW-09, T-58) ----------
+
+    [RelayCommand]
+    private void ToggleReadOnly()
+    {
+        if (SelectedTab is { } t) t.IsUserReadOnly = !t.IsUserReadOnly;
+        AttachSurfaces(SelectedTab);
+    }
+
+    // ---------- rich copy (PRD F-EXP-04, T-57) ----------
+
+    [RelayCommand]
+    private async Task CopyRichAsync()
+    {
+        if (SelectedTab?.Surface is not WebEditorSurface web) return;
+        try
+        {
+            var r = await web.Host.Bridge.CallAsync<CopyRichResult>("edit.copyRich", timeout: TimeSpan.FromSeconds(30));
+            if (r is null) return;
+            _dialogs.SetClipboardRich(r.Html, r.Text);
+            _dialogs.ShowInfo("서식 있는 텍스트로 복사했습니다. Word·메일에 붙여넣을 수 있습니다.");
+        }
+        catch (BridgeException ex)
+        {
+            _dialogs.ShowInfo($"복사 실패: {ex.Message}", isError: true);
+        }
+    }
 
     public IReadOnlyList<RecentFile> RecentFiles => _recent.Items;
 
@@ -98,8 +212,11 @@ public sealed partial class ShellViewModel : ObservableObject
     private void AttachSurfaces(DocumentViewModel? tab)
     {
         var surface = tab?.Surface;
-        Toolbar.Attach(surface is { SupportsFormatting: true } ? surface : null);
+        var editable = tab is { IsUserReadOnly: false, IsReadOnly: false };
+        Toolbar.Attach(surface is { SupportsFormatting: true } && editable ? surface : null);
         Find.Reattach(surface);
+        Outline.Attach(surface is { SupportsFormatting: true } ? surface : null);
+        Sidebar.SetRoot(tab?.Document.Directory ?? Sidebar.RootPath);
     }
 
     private void OnTabsChanged(object? sender, NotifyCollectionChangedEventArgs e) => OnPropertyChanged(nameof(HasTabs));
@@ -113,6 +230,10 @@ public sealed partial class ShellViewModel : ObservableObject
         vm.TextFileDropped += (_, e) => OpenDroppedText(e);
         vm.LinkOpenRequested += (s, href) => _ = OpenLinkAsync((DocumentViewModel)s!, href);
         vm.Notification += (_, msg) => _dialogs.ShowInfo(msg);
+        vm.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(DocumentViewModel.Path) && s == SelectedTab) Sidebar.SetRoot(vm.Document.Directory ?? Sidebar.RootPath);
+        };
         Tabs.Add(vm);
         SelectedTab = vm;
         return vm;
@@ -498,6 +619,9 @@ public sealed partial class ShellViewModel : ObservableObject
                 case "ctrl+shift+i": await InsertImageAsync(); break;
                 case "ctrl+shift+e": await ExportAsync(ExportFormat.Html); break;
                 case "ctrl+p": await PrintAsync(); break;
+                case "ctrl+shift+o": ToggleOutline(); break;
+                case "ctrl+shift+b": ToggleSidebar(); break;
+                case "ctrl+,": await OpenSettingsAsync(); break;
                 case "f5":
                     if (SelectedTab?.Surface is { } s) await s.ExecuteAsync("insert.datetime", new InsertTextParams(DateTime.Now.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture)));
                     break;

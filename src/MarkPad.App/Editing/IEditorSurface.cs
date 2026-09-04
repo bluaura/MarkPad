@@ -45,6 +45,8 @@ public interface IEditorSurface : IAsyncDisposable
     event EventHandler<ShortcutEvent>? ShortcutRequested;
     event EventHandler<DroppedTextFile>? TextFileDropped;
     event EventHandler<FindResult>? FindResultChanged;
+    /// <summary>Heading tree (PRD F-VIEW-05); plain text surfaces never raise it.</summary>
+    event EventHandler<OutlineEvent>? OutlineChanged;
     /// <summary>Ctrl+click on a link (href as written in the document).</summary>
     event EventHandler<string>? LinkOpenRequested;
 }

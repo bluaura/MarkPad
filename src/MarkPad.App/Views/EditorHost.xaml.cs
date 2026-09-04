@@ -42,6 +42,7 @@ public sealed partial class EditorHost : UserControl, IAsyncDisposable
     public event EventHandler<ShortcutEvent>? ShortcutRequested;
     public event EventHandler<Editing.DroppedTextFile>? TextFileDropped;
     public event EventHandler<FindResult>? FindResultChanged;
+    public event EventHandler<OutlineEvent>? OutlineChanged;
     /// <summary>Ctrl+click on a link; the href as written in the document.</summary>
     public event EventHandler<string>? LinkOpenRequested;
     public event EventHandler? RendererCrashed;
@@ -62,7 +63,9 @@ public sealed partial class EditorHost : UserControl, IAsyncDisposable
 
         var s = core.Settings;
         s.IsWebMessageEnabled = true;
-        s.AreDefaultContextMenusEnabled = false;   // JS-side context menu (ARCHITECTURE §4.1)
+        // Chromium's menu supplies cut/copy/paste (paste cannot be scripted); browser items are stripped and
+        // "블록 소스 편집" (F-EDIT-12) is added in OnContextMenuRequested.
+        s.AreDefaultContextMenusEnabled = true;
         s.AreBrowserAcceleratorKeysEnabled = false; // Ctrl+F/P/O… go through the JS host keymap (ADR-06)
         s.IsStatusBarEnabled = false;
         s.IsZoomControlEnabled = false;
@@ -80,6 +83,7 @@ public sealed partial class EditorHost : UserControl, IAsyncDisposable
         core.NavigationStarting += OnNavigationStarting;
         core.NewWindowRequested += OnNewWindowRequested;
         core.ProcessFailed += OnProcessFailed;
+        core.ContextMenuRequested += OnContextMenuRequested;
 
         _bridge = new EditorBridge(core, DispatcherQueue, _log);
         _bridge.EventReceived += OnBridgeEvent;
@@ -253,6 +257,9 @@ public sealed partial class EditorHost : UserControl, IAsyncDisposable
             case "find.result":
                 if (e.PayloadAs<FindResult>() is { } fr) FindResultChanged?.Invoke(this, fr);
                 break;
+            case "outline":
+                if (e.PayloadAs<OutlineEvent>() is { } ol) OutlineChanged?.Invoke(this, ol);
+                break;
             case "files.dropped":
                 if (e.Payload is { } p && p.TryGetProperty("files", out var files))
                 {
@@ -287,6 +294,45 @@ public sealed partial class EditorHost : UserControl, IAsyncDisposable
         {
             _ = Launcher.LaunchUriAsync(uri);
         }
+    }
+
+    private static readonly HashSet<string> s_keepMenuItems = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "cut", "copy", "paste", "pasteAndMatchStyle", "selectAll", "undo", "redo", "copyLinkText", "copyLinkLocation",
+    };
+
+    private CoreWebView2ContextMenuItem? _sourceMenuItem;
+
+    /// <summary>Keep editing items, drop browser-only ones (back/reload/inspect/save as…), add block source editing.</summary>
+    private void OnContextMenuRequested(CoreWebView2 sender, CoreWebView2ContextMenuRequestedEventArgs args)
+    {
+        var items = args.MenuItems;
+        for (var i = items.Count - 1; i >= 0; i--)
+        {
+            var item = items[i];
+            if (item.Kind == CoreWebView2ContextMenuItemKind.Separator) continue;
+            if (!s_keepMenuItems.Contains(item.Name)) items.RemoveAt(i);
+        }
+        // collapse duplicate/leading separators
+        for (var i = items.Count - 1; i >= 0; i--)
+        {
+            if (items[i].Kind != CoreWebView2ContextMenuItemKind.Separator) continue;
+            if (i == 0 || i == items.Count - 1 || items[i - 1].Kind == CoreWebView2ContextMenuItemKind.Separator) items.RemoveAt(i);
+        }
+
+        _sourceMenuItem ??= CreateSourceMenuItem(sender.Environment);
+        if (items.Count > 0) items.Add(sender.Environment.CreateContextMenuItem(string.Empty, null, CoreWebView2ContextMenuItemKind.Separator));
+        items.Add(_sourceMenuItem);
+    }
+
+    private CoreWebView2ContextMenuItem CreateSourceMenuItem(CoreWebView2Environment env)
+    {
+        var item = env.CreateContextMenuItem("블록 소스 편집", null, CoreWebView2ContextMenuItemKind.Command);
+        item.CustomItemSelected += (_, _) =>
+        {
+            _ = Bridge.CallAsync("block.showSource", new BlockShowSourceParams(null));
+        };
+        return item;
     }
 
     private void OnProcessFailed(CoreWebView2 sender, CoreWebView2ProcessFailedEventArgs args)

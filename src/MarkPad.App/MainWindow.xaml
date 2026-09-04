@@ -3,6 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:MarkPad.App.Controls"
+    xmlns:views="using:MarkPad.App.Views"
     xmlns:vm="using:MarkPad.App.ViewModels"
     Title="MarkPad">
 
@@ -42,6 +43,8 @@
             <KeyboardAccelerator Key="Tab" Modifiers="Control" Invoked="OnAccelerator" />
             <KeyboardAccelerator Key="Tab" Modifiers="Control,Shift" Invoked="OnAccelerator" />
             <KeyboardAccelerator Key="T" Modifiers="Control,Shift" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="O" Modifiers="Control,Shift" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="B" Modifiers="Control,Shift" Invoked="OnAccelerator" />
             <KeyboardAccelerator Key="F" Modifiers="Control" Invoked="OnAccelerator" />
             <KeyboardAccelerator Key="H" Modifiers="Control" Invoked="OnAccelerator" />
             <KeyboardAccelerator Key="K" Modifiers="Control" Invoked="OnAccelerator" />
@@ -81,7 +84,7 @@
             </TabView.TabStripFooter>
         </TabView>
 
-        <!-- Row 1: file buttons + format toolbar -->
+        <!-- Row 1: menu + file buttons + format toolbar -->
         <Grid Grid.Row="1"
               Visibility="{x:Bind ViewModel.ShowToolbar, Mode=OneWay}"
               Background="{ThemeResource LayerFillColorDefaultBrush}"
@@ -92,6 +95,28 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <StackPanel Orientation="Horizontal" Padding="8,4,0,4">
+                <DropDownButton Height="32" Padding="8,0" Margin="1,0" Background="Transparent" BorderThickness="0" AutomationProperties.Name="메뉴" ToolTipService.ToolTip="메뉴">
+                    <FontIcon Glyph="&#xE700;" FontSize="16" />
+                    <DropDownButton.Flyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem Text="새 문서 (Ctrl+N)" Command="{x:Bind ViewModel.NewDocumentCommand}" />
+                            <MenuFlyoutItem Text="열기… (Ctrl+O)" Command="{x:Bind ViewModel.OpenWithPickerCommand}" />
+                            <MenuFlyoutItem Text="저장 (Ctrl+S)" Command="{x:Bind ViewModel.SaveCommand}" />
+                            <MenuFlyoutItem Text="다른 이름으로 저장… (Ctrl+Shift+S)" Command="{x:Bind ViewModel.SaveAsCommand}" />
+                            <MenuFlyoutSeparator />
+                            <MenuFlyoutItem Text="내보내기 HTML/PDF… (Ctrl+Shift+E)" Command="{x:Bind ViewModel.ExportCommand}" />
+                            <MenuFlyoutItem Text="인쇄… (Ctrl+P)" Command="{x:Bind ViewModel.PrintCommand}" />
+                            <MenuFlyoutItem Text="서식 있는 텍스트로 복사" Command="{x:Bind ViewModel.CopyRichCommand}" />
+                            <MenuFlyoutSeparator />
+                            <ToggleMenuFlyoutItem Text="개요 패널 (Ctrl+Shift+O)" IsChecked="{x:Bind ViewModel.ShowOutline, Mode=TwoWay}" />
+                            <ToggleMenuFlyoutItem Text="파일 사이드바 (Ctrl+Shift+B)" IsChecked="{x:Bind ViewModel.ShowSidebar, Mode=TwoWay}" />
+                            <MenuFlyoutItem Text="툴바 숨기기 (Ctrl+Shift+T)" Command="{x:Bind ViewModel.ToggleToolbarCommand}" />
+                            <MenuFlyoutItem Text="읽기 전용 토글" Command="{x:Bind ViewModel.ToggleReadOnlyCommand}" />
+                            <MenuFlyoutSeparator />
+                            <MenuFlyoutItem Text="설정… (Ctrl+,)" Command="{x:Bind ViewModel.OpenSettingsCommand}" />
+                        </MenuFlyout>
+                    </DropDownButton.Flyout>
+                </DropDownButton>
                 <Button Height="32" Padding="8,0" Margin="1,0" Background="Transparent" BorderThickness="0" Command="{x:Bind ViewModel.NewDocumentCommand}" ToolTipService.ToolTip="새 문서 (Ctrl+N)" AutomationProperties.Name="새 문서">
                     <FontIcon Glyph="&#xE8A5;" FontSize="16" />
                 </Button>
@@ -115,8 +140,17 @@
         <!-- Row 3: global notifications -->
         <InfoBar x:Name="Notice" Grid.Row="3" IsOpen="False" IsClosable="True" />
 
-        <!-- Row 4: tab contents live here permanently (WebView2 must never be re-parented); StartPage when empty -->
-        <Grid x:Name="ContentHost" Grid.Row="4" />
+        <!-- Row 4: sidebar | outline | tab contents (WebView2 must never be re-parented); StartPage when empty -->
+        <Grid Grid.Row="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <views:FileSidebar x:Name="SidebarPane" Grid.Column="0" Width="240" Visibility="{x:Bind ViewModel.ShowSidebar, Mode=OneWay}" />
+            <views:OutlinePane x:Name="OutlinePaneControl" Grid.Column="1" Width="220" Visibility="{x:Bind ViewModel.ShowOutline, Mode=OneWay}" />
+            <Grid x:Name="ContentHost" Grid.Column="2" />
+        </Grid>
 
         <!-- Row 5: status bar (PRD 4.1) -->
         <Grid Grid.Row="5" Padding="12,3"

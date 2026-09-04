@@ -5,8 +5,22 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
+
+        <!-- PRD F-FILE-08 / T-52: changed on disk while this tab has unsaved edits -->
+        <InfoBar Grid.Row="1"
+                 IsOpen="{x:Bind ViewModel.HasExternalChange, Mode=OneWay}"
+                 IsClosable="True"
+                 CloseButtonCommand="{x:Bind ViewModel.IgnoreExternalChangeCommand}"
+                 Severity="Informational"
+                 Title="파일이 외부에서 변경됨"
+                 Message="다른 프로그램이 이 파일을 수정했습니다. 다시 읽으면 현재 편집 내용은 사라집니다. (닫기 = 무시)">
+            <InfoBar.ActionButton>
+                <Button Content="다시 읽기" Command="{x:Bind ViewModel.ReloadFromDiskCommand}" />
+            </InfoBar.ActionButton>
+        </InfoBar>
 
         <!-- PRD F-FILE-06 / T-19: non-UTF-8 files open read-only until converted -->
         <InfoBar Grid.Row="0"
@@ -20,6 +34,6 @@
             </InfoBar.ActionButton>
         </InfoBar>
 
-        <Border x:Name="SurfaceHost" Grid.Row="1" />
+        <Border x:Name="SurfaceHost" Grid.Row="2" />
     </Grid>
 </UserControl>

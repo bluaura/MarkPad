@@ -33,7 +33,9 @@ public partial class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         Directory.CreateDirectory(LocalDataDir);
-        Services.GetRequiredService<SettingsStore>().Load();
+        var settings = Services.GetRequiredService<SettingsStore>();
+        settings.Load();
+        settings.StartWatching();
         Services.GetRequiredService<RecentFilesStore>().Load();
         Services.GetRequiredService<AssetService>().CleanupStale(TimeSpan.FromDays(7));
 
@@ -79,7 +81,8 @@ public partial class App : Application
 
     private void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
     {
-        Services.GetRequiredService<ILogger<App>>().LogCritical(e.Exception, "Unhandled exception");
+        // XAML "stowed" exceptions often carry the useful text only in e.Message.
+        Services.GetRequiredService<ILogger<App>>().LogCritical(e.Exception, "Unhandled exception: {Message}", e.Message);
         try
         {
             _window?.ViewModel.FlushSnapshotsBlocking(); // PRD §5.5: keep unsaved work recoverable

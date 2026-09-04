@@ -8,6 +8,8 @@ param(
     [string]$Screenshot,
     # WScript.Shell SendKeys sequence sent after clicking into the document (e.g. '^{END}' to scroll to the end).
     [string]$Keys,
+    # Window-relative "x,y" (physical pixels) to click before sending keys / capturing (e.g. a block header).
+    [string]$ClickAt,
     [int]$SettleSeconds = 8,
     [ValidateSet('Debug', 'Release')] [string]$Configuration = 'Debug',
     [switch]$KeepRunning
@@ -52,13 +54,16 @@ if ($Keys -and [Win32]::GetForegroundWindow() -ne $h) {
 $r = New-Object Win32+RECT
 [Win32]::GetWindowRect($h, [ref]$r) | Out-Null
 
-if ($Keys) {
-    $cx = [int](($r.L + $r.R) / 2); $cy = [int]($r.T + 320)
+if ($Keys -or $ClickAt) {
+    if ($ClickAt) { $p = $ClickAt.Split(','); $cx = $r.L + [int]$p[0]; $cy = $r.T + [int]$p[1] }
+    else { $cx = [int](($r.L + $r.R) / 2); $cy = [int]($r.T + 320) }
     [Win32]::SetCursorPos($cx, $cy) | Out-Null
     [Win32]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero); [Win32]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
-    Start-Sleep -Milliseconds 400
-    $ws = New-Object -ComObject WScript.Shell
-    $ws.SendKeys($Keys)
+    Start-Sleep -Milliseconds 600
+    if ($Keys) {
+        $ws = New-Object -ComObject WScript.Shell
+        $ws.SendKeys($Keys)
+    }
     Start-Sleep -Milliseconds 1200
 }
 

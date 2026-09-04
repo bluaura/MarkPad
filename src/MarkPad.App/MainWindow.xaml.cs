@@ -52,7 +52,16 @@ public sealed partial class MainWindow : Window, IDialogService
 
         Toolbar.ViewModel = ViewModel.Toolbar;
         FindBarControl.ViewModel = ViewModel.Find;
+        OutlinePaneControl.ViewModel = ViewModel.Outline;
+        SidebarPane.ViewModel = ViewModel.Sidebar;
         ViewModel.Toolbar.LinkFlyoutRequested += (_, _) => Toolbar.ShowLinkFlyout();
+        // settings.json edited by hand (PRD F-SET-05): re-apply on the UI thread.
+        _settings.ExternalChange += (_, _) => DispatcherQueue.TryEnqueue(() =>
+        {
+            Root.RequestedTheme = _theme.RequestedTheme;
+            ViewModel.ApplySettings();
+            ShowInfo("settings.json 변경을 반영했습니다.");
+        });
         ViewModel.Tabs.CollectionChanged += OnTabsCollectionChanged;
         ViewModel.PropertyChanged += OnShellPropertyChanged;
         AppWindow.Closing += OnAppWindowClosing;
@@ -266,6 +275,7 @@ public sealed partial class MainWindow : Window, IDialogService
         var key = sender.Key switch
         {
             >= Windows.System.VirtualKey.Number0 and <= Windows.System.VirtualKey.Number9 => ((int)sender.Key - (int)Windows.System.VirtualKey.Number0).ToString(System.Globalization.CultureInfo.InvariantCulture),
+            (Windows.System.VirtualKey)188 => ",", // VK_OEM_COMMA
             _ => sender.Key.ToString().ToLowerInvariant(),
         };
         parts.Add(key);
@@ -380,6 +390,24 @@ public sealed partial class MainWindow : Window, IDialogService
         picker.FileTypeChoices.Add(extension == ".pdf" ? "PDF" : "HTML", [extension]);
         var result = await picker.PickSaveFileAsync();
         return result?.Path is { Length: > 0 } p ? p : null;
+    }
+
+    public async Task<bool> ShowSettingsAsync()
+    {
+        var dialog = new Dialogs.SettingsDialog(_settings.Current, _settings.Path) { XamlRoot = Root.XamlRoot };
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return false;
+        await _settings.UpdateAsync(dialog.ApplyTo);
+        Root.RequestedTheme = _theme.RequestedTheme;
+        return true;
+    }
+
+    public void SetClipboardRich(string html, string text)
+    {
+        var package = new DataPackage { RequestedOperation = DataPackageOperation.Copy };
+        package.SetText(text);
+        package.SetHtmlFormat(HtmlFormatHelper.CreateHtmlFormat(html));
+        Clipboard.SetContent(package);
+        Clipboard.Flush();
     }
 
     public async Task<bool> ConfirmAsync(string title, string message, string primaryText)

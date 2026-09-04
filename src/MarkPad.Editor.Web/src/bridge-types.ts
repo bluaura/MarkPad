@@ -171,6 +171,15 @@ export interface OutlineItem {
   text: string
   pos: number
 }
+export interface OutlineEvent {
+  items: OutlineItem[]
+  active: number
+}
+export interface CopyRichResult {
+  html: string
+  text: string
+  markdown: string
+}
 export interface ShortcutEvent {
   key: string // e.g. "ctrl+s", "ctrl+shift+s", "ctrl+alt+3", "f5"
 }
