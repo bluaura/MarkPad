@@ -49,18 +49,19 @@ public sealed class DocumentIO
         };
     }
 
-    public static Document CreateNew(DocumentKind kind = DocumentKind.Markdown, LineEnding eol = LineEnding.Lf)
+    /// <summary>New unsaved document. <paramref name="initialText"/> (e.g. dropped file contents) makes it dirty from the start.</summary>
+    public static Document CreateNew(DocumentKind kind = DocumentKind.Markdown, LineEnding eol = LineEnding.Lf, string? initialText = null)
     {
         return new Document
         {
             Path = null,
             Kind = kind,
-            OriginalText = string.Empty,
+            OriginalText = initialText is null ? string.Empty : EolDetector.NormalizeToLf(initialText),
             Encoding = EncodingDetector.Utf8NoBom,
             HasBom = false,
             Eol = eol,
             EndsWithNewline = true,
-            IsDirty = false,
+            IsDirty = initialText is not null,
         };
     }
 

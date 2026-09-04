@@ -1,0 +1,25 @@
+<UserControl
+    x:Class="MarkPad.App.Views.DocumentTab"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- PRD F-FILE-06 / T-19: non-UTF-8 files open read-only until converted -->
+        <InfoBar Grid.Row="0"
+                 IsOpen="{x:Bind ViewModel.IsReadOnly, Mode=OneWay}"
+                 IsClosable="False"
+                 Severity="Warning"
+                 Title="읽기 전용"
+                 Message="{x:Bind EncodingMessage}">
+            <InfoBar.ActionButton>
+                <Button Content="UTF-8로 변환하여 편집" Command="{x:Bind ViewModel.ConvertToUtf8Command}" />
+            </InfoBar.ActionButton>
+        </InfoBar>
+
+        <Border x:Name="SurfaceHost" Grid.Row="1" />
+    </Grid>
+</UserControl>

@@ -18,7 +18,7 @@
 |---|---|---|
 | .NET | **10.0 (LTS)** | TFM `net10.0-windows10.0.19041.0` |
 | Windows App SDK | **2.4.x** (2026-08 안정판) | SemVer 체계. NuGet `Microsoft.WindowsAppSDK` 2.4.* |
-| WinUI 3 | Windows App SDK 동봉 | `TabView`, `TitleBar`, `CommandBar`, `SystemBackdropElement` 사용 |
+| WinUI 3 | Windows App SDK 동봉 | `TabView`, `CommandBar`, `MicaBackdrop` 사용. WASDK 2.3.6 WinUI에는 `TitleBar` 컨트롤이 없어 `ExtendsContentIntoTitleBar` + `SetTitleBar(TabStripFooter)`로 탭을 제목 표시줄에 넣는다 |
 | WebView2 | Evergreen 런타임 (OS 기본 탑재) | `Microsoft.Web.WebView2` — Windows App SDK가 참조하는 버전 사용. 최소 런타임 버전을 앱 시작 시 검사 |
 | C# 언어 | C# 14 | nullable 활성, `ImplicitUsings` |
 | MVVM | CommunityToolkit.Mvvm 8.x | `ObservableObject`, `RelayCommand`, Messenger |
@@ -215,6 +215,7 @@ public interface IEditorSurface : IAsyncDisposable
 }
 ```
 구현체: `WebEditorSurface`(WebView2+Milkdown), `PlainTextSurface`(TextBox). 툴바·상태바·저장 로직은 인터페이스만 본다.
+구현 메모(T-15): 실제 시그니처는 `Editing/IEditorSurface.cs` — `ExecuteAsync(string method, object? p)`로 브릿지 메서드명을 그대로 쓰고, `MarkSavedAsync()`가 저장 후 dirty 기준선을 재설정한다. 표면은 `DocumentTab` 뷰가 생성해 `DocumentViewModel.AttachSurfaceAsync`로 붙인다(WebView2는 탭 전환 시 재부모화하지 않도록 `ContentHost`에 상주하고 Visibility만 바꾼다; `TabView`는 헤더 전용).
 
 #### FormatToolbar (Controls)
 - `CommandBar` 기반, 두 층(기본 12개 + 오버플로). 각 버튼은 `ToolbarViewModel`의 `EditorCommand`에 바인딩, 토글 상태는 `SelectionContext`(bold/italic/strike/code/headingLevel/listType/blockquote/inTable/inCodeBlock/codeLang)로 갱신.
@@ -335,6 +336,8 @@ bridge.emit('ready', { version })
 | `doc.getMarkdown` | — | `{text}` | |
 | `doc.serializeForSave` | `{original}` | `{text, changedBlocks}` | G4, §5 |
 | `doc.setReadonly` | `{value}` | | F-VIEW-09 |
+| `doc.markSaved` | — | | 저장 성공 후 dirty 기준선 재설정(커서·히스토리 유지) |
+| `doc.isDirty` | — | `{dirty}` | |
 | `doc.rewriteAssetPaths` | `{map: {old:new}}` | `{count}` | F-IMG-04 |
 | `format.toggle` | `{mark: bold\|italic\|strike\|code\|highlight}` | | 부록 A |
 | `format.heading` | `{level: 0..6}` | | |
@@ -368,6 +371,7 @@ bridge.emit('ready', { version })
 | evt | `find.result` | `{count, index}` |
 | evt | `shortcut` | `{key: "ctrl+s" …}` — 앱 단축키 위임 |
 | evt | `log` | `{level, msg}` |
+| evt | `files.dropped` | `{files: [{name, text}]}` — 편집기 위에 md/txt를 드롭한 경우. WebView2는 파일 경로를 노출하지 않으므로 호스트가 **제목 없는 복사본**으로 연다. 탭 줄·툴바·상태바 드롭은 XAML `Drop`으로 원본 경로를 연다 |
 | req | `asset.save` | `{bytesBase64, mime, suggestedName?}` → `{relPath}` |
 | req | `asset.pick` | — → `{relPath, alt}` (파일 대화상자) |
 | req | `asset.readBase64` | `{src}` → `{dataUrl}` (HTML 내보내기 임베드용) |

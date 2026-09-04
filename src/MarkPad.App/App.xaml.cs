@@ -1,5 +1,7 @@
 using MarkPad.App.Services;
 using MarkPad.Core.Documents;
+using MarkPad.Core.Mru;
+using MarkPad.Core.Settings;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml;
@@ -9,7 +11,7 @@ namespace MarkPad.App;
 
 public partial class App : Application
 {
-    private Window? _window;
+    private MainWindow? _window;
 
     public App()
     {
@@ -28,16 +30,29 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        Directory.CreateDirectory(LocalDataDir);
+        Services.GetRequiredService<SettingsStore>().Load();
+        Services.GetRequiredService<RecentFilesStore>().Load();
+
         // Warm up the shared WebView2 environment while the shell is being built (ARCHITECTURE §7.3).
         _ = WebViewEnvironment.GetAsync();
 
         _window = new MainWindow();
         _window.Activate();
 
-        var files = Environment.GetCommandLineArgs().Skip(1).Where(File.Exists).ToArray();
-        if (files.Length > 0 && _window is MainWindow main)
+        // Later activations (Explorer double-click while running) arrive here (ADR-10).
+        ActivationService.Start(_window.DispatcherQueue);
+        ActivationService.FilesActivated += files =>
         {
-            _ = main.OpenFileAsync(files[0]);
+            _window.AppWindow.Show();
+            _window.Activate();
+            _ = _window.OpenFilesAsync(files);
+        };
+
+        var initial = ActivationService.GetInitialFiles();
+        if (initial.Count > 0)
+        {
+            _ = _window.OpenFilesAsync(initial);
         }
     }
 
@@ -46,6 +61,10 @@ public partial class App : Application
         var services = new ServiceCollection();
         services.AddLogging(b => b.AddSerilog(LoggingSetup.CreateLogger(), dispose: true));
         services.AddSingleton<DocumentIO>();
+        services.AddSingleton(new SettingsStore(Path.Combine(LocalDataDir, "settings.json")));
+        services.AddSingleton(new RecentFilesStore(Path.Combine(LocalDataDir, "recent.json")));
+        services.AddSingleton<ThemeService>();
+        services.AddSingleton<JumpListService>();
         return services.BuildServiceProvider();
     }
 

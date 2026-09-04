@@ -1,17 +1,17 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MarkPad.App.Bridge;
-using MarkPad.App.Views;
+using MarkPad.App.Editing;
 
 namespace MarkPad.App.ViewModels;
 
 /// <summary>
-/// Toolbar state + commands (ARCHITECTURE.md §3.2 FormatToolbar). Toggle state comes from the editor's
-/// <c>selection</c> event; commands are forwarded to the attached editor surface.
+/// Toolbar state + commands (ARCHITECTURE.md §3.2 FormatToolbar). Toggle state comes from the surface's
+/// <c>selection</c> event; commands are forwarded to the attached surface. Null surface = disabled (.txt tabs).
 /// </summary>
 public sealed partial class ToolbarViewModel : ObservableObject
 {
-    private EditorHost? _editor;
+    private IEditorSurface? _surface;
 
     [ObservableProperty]
     public partial bool IsBold { get; set; }
@@ -46,13 +46,13 @@ public sealed partial class ToolbarViewModel : ObservableObject
 
     public string HeadingLabel => HeadingLevel == 0 ? "본문" : $"H{HeadingLevel}";
 
-    /// <summary>Switches the toolbar to a tab's editor (null = no editor, e.g. a .txt tab).</summary>
-    public void Attach(EditorHost? editor)
+    /// <summary>Switches the toolbar to a tab's surface (null = no formatting, e.g. a .txt tab).</summary>
+    public void Attach(IEditorSurface? surface)
     {
-        if (_editor is not null) _editor.SelectionChanged -= OnSelection;
-        _editor = editor;
-        if (_editor is not null) _editor.SelectionChanged += OnSelection;
-        IsEnabled = editor is not null;
+        if (_surface is not null) _surface.SelectionChanged -= OnSelection;
+        _surface = surface;
+        if (_surface is not null) _surface.SelectionChanged += OnSelection;
+        IsEnabled = surface is not null;
         Apply(SelectionContext.Empty);
     }
 
@@ -73,11 +73,11 @@ public sealed partial class ToolbarViewModel : ObservableObject
 
     private async Task RunAsync(string method, object? p = null)
     {
-        if (_editor is null || !_editor.IsInitialized) return;
+        if (_surface is null || !_surface.IsReady) return;
         try
         {
-            await _editor.ExecuteAsync(method, p);
-            _editor.FocusEditor();
+            await _surface.ExecuteAsync(method, p);
+            await _surface.FocusAsync();
         }
         catch (BridgeException)
         {

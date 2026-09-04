@@ -36,6 +36,7 @@ public sealed partial class EditorHost : UserControl, IAsyncDisposable
     public event EventHandler<ChangedEvent>? Changed;
     public event EventHandler<SelectionContext>? SelectionChanged;
     public event EventHandler<ShortcutEvent>? ShortcutRequested;
+    public event EventHandler<Editing.DroppedTextFile>? TextFileDropped;
     public event EventHandler? RendererCrashed;
 
     /// <summary>Creates the CoreWebView2 (shared environment), applies security settings and navigates to the bundle.</summary>
@@ -164,6 +165,17 @@ public sealed partial class EditorHost : UserControl, IAsyncDisposable
                 break;
             case "shortcut":
                 if (e.PayloadAs<ShortcutEvent>() is { } sc) ShortcutRequested?.Invoke(this, sc);
+                break;
+            case "files.dropped":
+                if (e.Payload is { } p && p.TryGetProperty("files", out var files))
+                {
+                    foreach (var f in files.EnumerateArray())
+                    {
+                        var name = f.TryGetProperty("name", out var n) ? n.GetString() ?? "dropped.md" : "dropped.md";
+                        var text = f.TryGetProperty("text", out var t) ? t.GetString() ?? "" : "";
+                        TextFileDropped?.Invoke(this, new Editing.DroppedTextFile(name, text));
+                    }
+                }
                 break;
         }
     }

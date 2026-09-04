@@ -7,6 +7,7 @@ import { registerDocHandlers } from './handlers/doc'
 import { registerFormatHandlers } from './handlers/format'
 import { registerInsertHandlers } from './handlers/insert'
 import { registerViewHandlers } from './handlers/view'
+import { installFileDrop } from './file-drop'
 import { installHostKeymap } from './host-keymap'
 import { defaultTheme, applyTheme } from './theme'
 
@@ -17,6 +18,7 @@ registerFormatHandlers()
 registerInsertHandlers()
 registerViewHandlers()
 installHostKeymap()
+installFileDrop()
 applyTheme(defaultTheme)
 
 window.addEventListener('error', (e) => bridge.log('error', `${e.message} @${e.filename}:${e.lineno}`))

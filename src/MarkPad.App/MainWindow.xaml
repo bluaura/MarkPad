@@ -3,38 +3,95 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:MarkPad.App.Controls"
-    xmlns:views="using:MarkPad.App.Views"
+    xmlns:vm="using:MarkPad.App.ViewModels"
     Title="MarkPad">
 
-    <Grid x:Name="Root" Loaded="OnRootLoaded" ActualThemeChanged="OnActualThemeChanged">
+    <Grid x:Name="Root"
+          Loaded="OnRootLoaded"
+          ActualThemeChanged="OnActualThemeChanged"
+          AllowDrop="True"
+          DragOver="OnDragOver"
+          Drop="OnDrop">
+        <Grid.Resources>
+            <DataTemplate x:Key="TabHeaderTemplate" x:DataType="vm:DocumentViewModel">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="{x:Bind DisplayTitle, Mode=OneWay}" VerticalAlignment="Center" />
+                    <Border Visibility="{x:Bind IsPlainText}" Background="{ThemeResource AccentFillColorDefaultBrush}" CornerRadius="3" Padding="4,0" VerticalAlignment="Center">
+                        <TextBlock Text="TXT" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
+                    </Border>
+                </StackPanel>
+            </DataTemplate>
+        </Grid.Resources>
+
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- App shortcuts while focus is outside the WebView (ARCHITECTURE ADR-06). Inside it, the JS host keymap delegates. -->
+        <!-- App shortcuts while focus is outside the WebView (ADR-06); inside it the JS host keymap delegates. -->
         <Grid.KeyboardAccelerators>
-            <KeyboardAccelerator Key="N" Modifiers="Control" Invoked="OnAccelNew" />
-            <KeyboardAccelerator Key="O" Modifiers="Control" Invoked="OnAccelOpen" />
-            <KeyboardAccelerator Key="S" Modifiers="Control" Invoked="OnAccelSave" />
-            <KeyboardAccelerator Key="S" Modifiers="Control,Shift" Invoked="OnAccelSaveAs" />
+            <KeyboardAccelerator Key="N" Modifiers="Control" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="O" Modifiers="Control" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="S" Modifiers="Control" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="S" Modifiers="Control,Shift" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="W" Modifiers="Control" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="Tab" Modifiers="Control" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="Tab" Modifiers="Control,Shift" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="T" Modifiers="Control,Shift" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="F5" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="Number1" Modifiers="Control,Menu" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="Number2" Modifiers="Control,Menu" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="Number3" Modifiers="Control,Menu" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="Number4" Modifiers="Control,Menu" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="Number5" Modifiers="Control,Menu" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="Number6" Modifiers="Control,Menu" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="Number7" Modifiers="Control,Menu" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="Number8" Modifiers="Control,Menu" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="Number9" Modifiers="Control,Menu" Invoked="OnAccelerator" />
         </Grid.KeyboardAccelerators>
 
-        <Grid Grid.Row="0" Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+        <!-- Row 0: tabs in the title bar (PRD 4.1) -->
+        <TabView x:Name="Tabs"
+                 Grid.Row="0"
+                 VerticalAlignment="Top"
+                 TabWidthMode="SizeToContent"
+                 CanReorderTabs="True"
+                 CanDragTabs="False"
+                 IsAddTabButtonVisible="True"
+                 AddTabButtonClick="OnAddTabClick"
+                 TabCloseRequested="OnTabCloseRequested"
+                 SelectionChanged="OnTabSelectionChanged">
+            <TabView.TabStripHeader>
+                <Grid x:Name="TitleBarLeft" Width="44" Height="40">
+                    <FontIcon Glyph="&#xE70B;" FontSize="16" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                </Grid>
+            </TabView.TabStripHeader>
+            <TabView.TabStripFooter>
+                <Grid x:Name="DragRegion" MinWidth="160" Height="40" />
+            </TabView.TabStripFooter>
+        </TabView>
+
+        <!-- Row 1: file buttons + format toolbar -->
+        <Grid Grid.Row="1"
+              Visibility="{x:Bind ViewModel.ShowToolbar, Mode=OneWay}"
+              Background="{ThemeResource LayerFillColorDefaultBrush}"
+              BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+              BorderThickness="0,1,0,1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel Orientation="Horizontal" Padding="8,4,0,4">
-                <Button Height="32" Padding="8,0" Margin="1,0" Background="Transparent" BorderThickness="0" Click="OnNewClick" ToolTipService.ToolTip="새 문서 (Ctrl+N)" AutomationProperties.Name="새 문서">
+                <Button Height="32" Padding="8,0" Margin="1,0" Background="Transparent" BorderThickness="0" Command="{x:Bind ViewModel.NewDocumentCommand}" ToolTipService.ToolTip="새 문서 (Ctrl+N)" AutomationProperties.Name="새 문서">
                     <FontIcon Glyph="&#xE8A5;" FontSize="16" />
                 </Button>
-                <Button Height="32" Padding="8,0" Margin="1,0" Background="Transparent" BorderThickness="0" Click="OnOpenClick" ToolTipService.ToolTip="열기 (Ctrl+O)" AutomationProperties.Name="열기">
+                <Button Height="32" Padding="8,0" Margin="1,0" Background="Transparent" BorderThickness="0" Command="{x:Bind ViewModel.OpenWithPickerCommand}" ToolTipService.ToolTip="열기 (Ctrl+O)" AutomationProperties.Name="열기">
                     <FontIcon Glyph="&#xE8E5;" FontSize="16" />
                 </Button>
-                <Button Height="32" Padding="8,0" Margin="1,0" Background="Transparent" BorderThickness="0" Click="OnSaveClick" ToolTipService.ToolTip="저장 (Ctrl+S)" AutomationProperties.Name="저장">
+                <Button Height="32" Padding="8,0" Margin="1,0" Background="Transparent" BorderThickness="0" Command="{x:Bind ViewModel.SaveCommand}" ToolTipService.ToolTip="저장 (Ctrl+S)" AutomationProperties.Name="저장">
                     <FontIcon Glyph="&#xE74E;" FontSize="16" />
                 </Button>
                 <Border Width="1" Height="20" Margin="6,0" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
@@ -42,11 +99,29 @@
             <controls:FormatToolbar x:Name="Toolbar" Grid.Column="1" />
         </Grid>
 
-        <views:EditorHost x:Name="Editor" Grid.Row="1" />
+        <!-- Row 2: global notifications -->
+        <InfoBar x:Name="Notice" Grid.Row="2" IsOpen="False" IsClosable="True" />
 
-        <Grid Grid.Row="2" Padding="12,3" Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
-            <TextBlock x:Name="StatusText" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="" />
-            <TextBlock x:Name="SaveStateText" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Right" Text="" />
+        <!-- Row 3: tab contents live here permanently (WebView2 must never be re-parented); StartPage when empty -->
+        <Grid x:Name="ContentHost" Grid.Row="3" />
+
+        <!-- Row 4: status bar (PRD 4.1) -->
+        <Grid Grid.Row="4" Padding="12,3"
+              Background="{ThemeResource LayerFillColorDefaultBrush}"
+              BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+              BorderThickness="0,1,0,0"
+              Visibility="{x:Bind ViewModel.HasTabs, Mode=OneWay}">
+            <StackPanel Orientation="Horizontal" Spacing="0">
+                <TextBlock Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                    <Run Text="단어 " /><Run Text="{x:Bind ViewModel.SelectedTab.WordCount, Mode=OneWay}" />
+                    <Run Text=" · 글자 " /><Run Text="{x:Bind ViewModel.SelectedTab.CharCount, Mode=OneWay}" />
+                    <Run Text=" · " /><Run Text="{x:Bind ViewModel.SelectedTab.EncodingLabel, Mode=OneWay}" />
+                    <Run Text=" · " /><Run Text="{x:Bind ViewModel.SelectedTab.EolLabel, Mode=OneWay}" />
+                    <Run Text=" · 줄 " /><Run Text="{x:Bind ViewModel.SelectedTab.Line, Mode=OneWay}" />
+                </TextBlock>
+            </StackPanel>
+            <TextBlock Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Right"
+                       Text="{x:Bind ViewModel.SelectedTab.SaveStateLabel, Mode=OneWay}" />
         </Grid>
     </Grid>
 </Window>

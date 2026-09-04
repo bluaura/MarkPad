@@ -11,6 +11,9 @@ param(
     [switch]$KeepRunning
 )
 $ErrorActionPreference = 'Stop'
+# PowerShell is not DPI aware; without this GetWindowRect/CopyFromScreen return scaled coordinates.
+Add-Type -Name Dpi -Namespace MarkPadTools -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetProcessDPIAware();'
+[MarkPadTools.Dpi]::SetProcessDPIAware() | Out-Null
 $root = Split-Path $PSScriptRoot -Parent
 $exe = Join-Path $root "src\MarkPad.App\bin\x64\$Configuration\net10.0-windows10.0.19041.0\win-x64\MarkPad.exe"
 if (-not (Test-Path $exe)) { throw "Build first: $exe not found" }

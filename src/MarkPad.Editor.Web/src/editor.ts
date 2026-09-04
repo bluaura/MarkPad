@@ -15,6 +15,8 @@ export interface MarkPadEditor {
   view(): EditorView
   getMarkdown(): string
   isDirty(): boolean
+  /** Re-baseline dirty tracking after a save (keeps cursor and history). */
+  markSaved(): void
   setReadonly(value: boolean): void
   focus(): void
   destroy(): Promise<void>
@@ -116,6 +118,11 @@ export async function createEditor(root: HTMLElement, markdown: string, settings
     isDirty: () => {
       const doc = crepe.editor.ctx.get(editorViewCtx).state.doc
       return loadedDoc ? !doc.eq(loadedDoc) : false
+    },
+    markSaved: () => {
+      loadedDoc = crepe.editor.ctx.get(editorViewCtx).state.doc
+      lastChanged = null
+      emitChanged(crepe.editor.ctx)
     },
     setReadonly: (value) => {
       crepe.setReadonly(value)

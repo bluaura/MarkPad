@@ -59,4 +59,9 @@ export function registerDocHandlers(): void {
   })
 
   bridge.register('doc.isDirty', () => ({ dirty: requireSession().editor.isDirty() }))
+
+  bridge.register('doc.markSaved', () => {
+    requireSession().editor.markSaved()
+    return null
+  })
 }

@@ -1,0 +1,17 @@
+<UserControl
+    x:Class="MarkPad.App.Views.PlainTextHost"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <TextBox x:Name="TextBoxControl"
+             AcceptsReturn="True"
+             TextWrapping="Wrap"
+             IsSpellCheckEnabled="False"
+             FontFamily="Cascadia Mono, Consolas, Courier New"
+             FontSize="14"
+             Padding="16,12"
+             BorderThickness="0"
+             CornerRadius="0"
+             Background="Transparent"
+             ScrollViewer.VerticalScrollBarVisibility="Auto"
+             AutomationProperties.Name="텍스트 편집기" />
+</UserControl>

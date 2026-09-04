@@ -11,6 +11,8 @@
     <Platform Condition="'$(Platform)' == '' or '$(Platform)' == 'AnyCPU'">x64</Platform>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <EnableDefaultPageItems>true</EnableDefaultPageItems>
+    <!-- Program.cs provides Main so single-instance redirection runs before XAML (ADR-10). -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
     <SatelliteResourceLanguages>ko;en</SatelliteResourceLanguages>
   </PropertyGroup>
 

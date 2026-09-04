@@ -1,116 +1,281 @@
-using MarkPad.App.Bridge;
+using System.Collections.Specialized;
+using MarkPad.App.Services;
+using MarkPad.App.ViewModels;
+using MarkPad.App.Views;
 using MarkPad.Core.Documents;
+using MarkPad.Core.Settings;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.UI;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.Windows.Storage.Pickers;
+using Windows.ApplicationModel.DataTransfer;
+using Windows.Graphics;
+using Windows.Storage;
 
 namespace MarkPad.App;
 
-/// <summary>
-/// M0 shell: one document, toolbar, editor, status bar. Tabs/ShellViewModel arrive with T-13/T-14;
-/// this window keeps the open/save/shortcut flows that those tasks will move into DocumentViewModel.
-/// </summary>
-public sealed partial class MainWindow : Window
+/// <summary>Shell window (PRD 4.1): tabs in the title bar, toolbar, content host, status bar.</summary>
+public sealed partial class MainWindow : Window, IDialogService
 {
-    private readonly DocumentIO _io = App.Current.Services.GetRequiredService<DocumentIO>();
     private readonly ILogger<MainWindow> _log = App.Current.Services.GetRequiredService<ILogger<MainWindow>>();
-    private Document _doc = DocumentIO.CreateNew();
-    private bool _dirty;
-    private bool _editorReady;
-    private string? _pendingOpenPath;
+    private readonly SettingsStore _settings = App.Current.Services.GetRequiredService<SettingsStore>();
+    private readonly ThemeService _theme = App.Current.Services.GetRequiredService<ThemeService>();
+    private readonly Dictionary<DocumentViewModel, (TabViewItem Item, DocumentTab View)> _tabViews = [];
+    private StartPage? _startPage;
+    private bool _syncingSelection;
     private bool _closeConfirmed;
-    private ChangedEvent _lastChanged = new(false, 0, 0, 1);
 
     public MainWindow()
     {
+        ViewModel = new ShellViewModel(
+            App.Current.Services.GetRequiredService<DocumentIO>(),
+            _settings,
+            App.Current.Services.GetRequiredService<Core.Mru.RecentFilesStore>(),
+            App.Current.Services.GetRequiredService<JumpListService>(),
+            _theme,
+            this,
+            App.Current.Services.GetRequiredService<ILogger<ShellViewModel>>());
+
         InitializeComponent();
         SystemBackdrop = new MicaBackdrop();
+        ExtendsContentIntoTitleBar = true;
+        SetTitleBar(DragRegion);
+        Root.RequestedTheme = _theme.RequestedTheme;
+
+        Toolbar.ViewModel = ViewModel.Toolbar;
+        ViewModel.Tabs.CollectionChanged += OnTabsCollectionChanged;
+        ViewModel.PropertyChanged += OnShellPropertyChanged;
         AppWindow.Closing += OnAppWindowClosing;
+        RestoreWindowPlacement();
         UpdateTitle();
+        ShowStartPageIfEmpty();
     }
 
-    private EditorSettingsDto CurrentSettings => new(
-        new EditorThemeDto(
-            Mode: Root.ActualTheme == ElementTheme.Dark ? "dark" : "light",
-            FontFamily: "'Segoe UI Variable Text', 'Segoe UI', 'Malgun Gothic', sans-serif",
-            FontSize: 15,
-            LineHeight: 1.7,
-            MaxWidth: 800,
-            Zoom: 1.0),
-        new MarkdownStyleDto(),
-        AllowRemoteImages: true);
+    public ShellViewModel ViewModel { get; }
+
+    public Task OpenFilesAsync(IEnumerable<string> paths) => ViewModel.OpenFilesAsync(paths);
 
     // ---------- lifecycle ----------
 
-    private async void OnRootLoaded(object sender, RoutedEventArgs e)
+    private void OnRootLoaded(object sender, RoutedEventArgs e)
     {
+        _theme.NotifyActualTheme(Root.ActualTheme);
+    }
+
+    private void OnActualThemeChanged(FrameworkElement sender, object args)
+    {
+        _theme.NotifyActualTheme(Root.ActualTheme);
+    }
+
+    private async void OnAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
+    {
+        if (_closeConfirmed) return;
+        args.Cancel = true;
+        if (!await ViewModel.RequestExitAsync()) return;
+        _closeConfirmed = true;
+        await SaveWindowPlacementAsync();
+        Close();
+    }
+
+    private void RestoreWindowPlacement()
+    {
+        var w = _settings.Current.Ui.Window;
         try
         {
-            await Editor.InitializeAsync();
-            _editorReady = true;
-            Editor.Changed += OnEditorChanged;
-            Editor.ShortcutRequested += OnEditorShortcut;
-            Editor.RendererCrashed += OnRendererCrashed;
-            Toolbar.ViewModel.Attach(Editor);
-
-            if (_pendingOpenPath is { } path)
+            var rect = new RectInt32(w.X, w.Y, w.W, w.H);
+            var area = DisplayArea.GetFromRect(rect, DisplayAreaFallback.Nearest).WorkArea;
+            var visible = rect.X < area.X + area.Width - 100 && rect.X + rect.Width > area.X + 100 && rect.Y >= area.Y - 20 && rect.Y < area.Y + area.Height - 100;
+            if (!visible)
             {
-                _pendingOpenPath = null;
-                await OpenFileAsync(path);
+                rect = new RectInt32(area.X + (area.Width - w.W) / 2, area.Y + (area.Height - w.H) / 2, Math.Min(w.W, area.Width), Math.Min(w.H, area.Height));
             }
-            else
+            AppWindow.MoveAndResize(rect);
+            if (w.Maximized && AppWindow.Presenter is OverlappedPresenter p) p.Maximize();
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            _log.LogWarning(ex, "window placement restore failed");
+        }
+    }
+
+    private Task SaveWindowPlacementAsync()
+    {
+        var maximized = AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Maximized };
+        return _settings.UpdateAsync(s =>
+        {
+            s.Ui.Window.Maximized = maximized;
+            if (!maximized)
             {
-                await LoadCurrentDocumentAsync();
+                s.Ui.Window.X = AppWindow.Position.X;
+                s.Ui.Window.Y = AppWindow.Position.Y;
+                s.Ui.Window.W = AppWindow.Size.Width;
+                s.Ui.Window.H = AppWindow.Size.Height;
+            }
+        });
+    }
+
+    // ---------- tabs ⇄ TabView ----------
+
+    private void OnTabsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        switch (e.Action)
+        {
+            case NotifyCollectionChangedAction.Add:
+                foreach (DocumentViewModel vm in e.NewItems!) AddTabView(vm, e.NewStartingIndex);
+                break;
+            case NotifyCollectionChangedAction.Remove:
+                foreach (DocumentViewModel vm in e.OldItems!) RemoveTabView(vm);
+                break;
+            case NotifyCollectionChangedAction.Reset:
+                foreach (var vm in _tabViews.Keys.ToList()) RemoveTabView(vm);
+                break;
+        }
+        ShowStartPageIfEmpty();
+    }
+
+    private void AddTabView(DocumentViewModel vm, int index)
+    {
+        var view = new DocumentTab(vm) { Visibility = Visibility.Collapsed };
+        var item = new TabViewItem
+        {
+            Header = vm,
+            HeaderTemplate = (DataTemplate)Root.Resources["TabHeaderTemplate"],
+            IconSource = new FontIconSource { Glyph = vm.IsPlainText ? "" : "" },
+            Tag = vm,
+        };
+        ToolTipService.SetToolTip(item, vm.Path ?? vm.Title);
+        _tabViews[vm] = (item, view);
+        ContentHost.Children.Add(view);
+        Tabs.TabItems.Insert(Math.Min(index, Tabs.TabItems.Count), item);
+        vm.PropertyChanged += OnDocumentPropertyChanged;
+    }
+
+    private void RemoveTabView(DocumentViewModel vm)
+    {
+        if (!_tabViews.Remove(vm, out var entry)) return;
+        vm.PropertyChanged -= OnDocumentPropertyChanged;
+        Tabs.TabItems.Remove(entry.Item);
+        ContentHost.Children.Remove(entry.View);
+    }
+
+    private void ShowStartPageIfEmpty()
+    {
+        if (ViewModel.Tabs.Count == 0)
+        {
+            _startPage ??= new StartPage(ViewModel);
+            if (!ContentHost.Children.Contains(_startPage)) ContentHost.Children.Add(_startPage);
+            _startPage.Visibility = Visibility.Visible;
+        }
+        else if (_startPage is not null)
+        {
+            _startPage.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void OnShellPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ShellViewModel.SelectedTab))
+        {
+            SyncSelectedTab();
+            UpdateTitle();
+        }
+    }
+
+    private void OnDocumentPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (sender == ViewModel.SelectedTab && e.PropertyName is nameof(DocumentViewModel.DisplayTitle) or nameof(DocumentViewModel.Path))
+        {
+            UpdateTitle();
+            if (sender is DocumentViewModel vm && _tabViews.TryGetValue(vm, out var entry))
+            {
+                ToolTipService.SetToolTip(entry.Item, vm.Path ?? vm.Title);
             }
         }
-        catch (Exception ex)
-        {
-            _log.LogError(ex, "editor initialization failed");
-            StatusText.Text = $"편집기 초기화 실패: {ex.Message}";
-        }
     }
 
-    public async Task OpenFileAsync(string path)
+    private void SyncSelectedTab()
     {
-        if (!_editorReady)
+        var selected = ViewModel.SelectedTab;
+        foreach (var (vm, entry) in _tabViews)
         {
-            _pendingOpenPath = path;
-            return;
+            entry.View.Visibility = vm == selected ? Visibility.Visible : Visibility.Collapsed;
         }
-        if (!await ConfirmDiscardAsync()) return;
-        try
+        if (selected is not null && _tabViews.TryGetValue(selected, out var sel) && !ReferenceEquals(Tabs.SelectedItem, sel.Item))
         {
-            _doc = await _io.OpenAsync(path);
-            await LoadCurrentDocumentAsync();
+            _syncingSelection = true;
+            Tabs.SelectedItem = sel.Item;
+            _syncingSelection = false;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            _log.LogError(ex, "open failed: {Path}", path);
-            StatusText.Text = $"열기 실패: {ex.Message}";
-        }
+        _ = selected?.FocusAsync();
     }
 
-    private async Task LoadCurrentDocumentAsync()
+    private void OnTabSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        await Editor.LoadAsync(_doc.OriginalText, _doc.Path, _doc.IsReadOnly, CurrentSettings);
-        _dirty = false;
-        UpdateTitle();
-        UpdateStatus();
-        Editor.FocusEditor();
+        if (_syncingSelection) return;
+        if (Tabs.SelectedItem is TabViewItem { Tag: DocumentViewModel vm })
+        {
+            ViewModel.SelectedTab = vm;
+        }
     }
 
-    private async Task NewDocumentAsync()
+    private void OnAddTabClick(TabView sender, object args) => ViewModel.NewDocumentCommand.Execute(null);
+
+    private async void OnTabCloseRequested(TabView sender, TabViewTabCloseRequestedEventArgs args)
     {
-        if (!await ConfirmDiscardAsync()) return;
-        _doc = DocumentIO.CreateNew();
-        await LoadCurrentDocumentAsync();
+        if (args.Item is TabViewItem { Tag: DocumentViewModel vm })
+        {
+            await ViewModel.TryCloseTabAsync(vm);
+        }
     }
 
-    private async Task OpenWithPickerAsync()
+    private void UpdateTitle()
+    {
+        var tab = ViewModel.SelectedTab;
+        Title = tab is null ? "MarkPad" : $"{tab.DisplayTitle} - MarkPad";
+    }
+
+    // ---------- shortcuts outside the WebView ----------
+
+    private async void OnAccelerator(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        args.Handled = true;
+        var parts = new List<string>();
+        if (sender.Modifiers.HasFlag(Windows.System.VirtualKeyModifiers.Control)) parts.Add("ctrl");
+        if (sender.Modifiers.HasFlag(Windows.System.VirtualKeyModifiers.Menu)) parts.Add("alt");
+        if (sender.Modifiers.HasFlag(Windows.System.VirtualKeyModifiers.Shift)) parts.Add("shift");
+        var key = sender.Key switch
+        {
+            >= Windows.System.VirtualKey.Number0 and <= Windows.System.VirtualKey.Number9 => ((int)sender.Key - (int)Windows.System.VirtualKey.Number0).ToString(System.Globalization.CultureInfo.InvariantCulture),
+            _ => sender.Key.ToString().ToLowerInvariant(),
+        };
+        parts.Add(key);
+        await ViewModel.HandleShortcutAsync(string.Join('+', parts));
+    }
+
+    // ---------- drag & drop (PRD F-FILE-01) ----------
+
+    private void OnDragOver(object sender, DragEventArgs e)
+    {
+        e.AcceptedOperation = e.DataView.Contains(StandardDataFormats.StorageItems) ? DataPackageOperation.Copy : DataPackageOperation.None;
+        e.DragUIOverride.Caption = "MarkPad에서 열기";
+    }
+
+    private async void OnDrop(object sender, DragEventArgs e)
+    {
+        if (!e.DataView.Contains(StandardDataFormats.StorageItems)) return;
+        var items = await e.DataView.GetStorageItemsAsync();
+        var paths = items.OfType<StorageFile>().Select(f => f.Path).Where(ActivationService.IsOpenable).ToList();
+        if (paths.Count > 0) await ViewModel.OpenFilesAsync(paths);
+    }
+
+    // ---------- IDialogService ----------
+
+    public async Task<IReadOnlyList<string>> PickOpenFilesAsync()
     {
         var picker = new FileOpenPicker(AppWindow.Id)
         {
@@ -120,162 +285,58 @@ public sealed partial class MainWindow : Window
         picker.FileTypeFilter.Add(".md");
         picker.FileTypeFilter.Add(".markdown");
         picker.FileTypeFilter.Add(".txt");
-        var result = await picker.PickSingleFileAsync();
-        if (result?.Path is { Length: > 0 } path)
-        {
-            await OpenFileAsync(path);
-        }
+        var results = await picker.PickMultipleFilesAsync();
+        return results?.Select(r => r.Path).Where(p => !string.IsNullOrEmpty(p)).ToList() ?? [];
     }
 
-    private async Task<bool> SaveAsync(bool saveAs)
+    public async Task<string?> PickSavePathAsync(string suggestedName, DocumentKind kind, string? initialDirectory)
     {
-        if (!_editorReady) return false;
-        var path = _doc.Path;
-        if (saveAs || path is null)
+        var picker = new FileSavePicker(AppWindow.Id)
         {
-            var picker = new FileSavePicker(AppWindow.Id)
-            {
-                SuggestedFileName = Path.GetFileNameWithoutExtension(_doc.FileName) is { Length: > 0 } n && _doc.Path is not null ? n : "Untitled",
-                DefaultFileExtension = _doc.Kind == DocumentKind.PlainText ? ".txt" : ".md",
-                SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
-                CommitButtonText = "저장",
-            };
+            SuggestedFileName = suggestedName,
+            DefaultFileExtension = kind == DocumentKind.PlainText ? ".txt" : ".md",
+            SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
+            CommitButtonText = "저장",
+        };
+        if (!string.IsNullOrEmpty(initialDirectory) && Directory.Exists(initialDirectory)) picker.SuggestedFolder = initialDirectory;
+        if (kind == DocumentKind.PlainText)
+        {
+            picker.FileTypeChoices.Add("텍스트", [".txt"]);
+            picker.FileTypeChoices.Add("Markdown", [".md", ".markdown"]);
+        }
+        else
+        {
             picker.FileTypeChoices.Add("Markdown", [".md", ".markdown"]);
             picker.FileTypeChoices.Add("텍스트", [".txt"]);
-            var result = await picker.PickSaveFileAsync();
-            if (result?.Path is not { Length: > 0 } chosen) return false;
-            path = chosen;
         }
-
-        try
-        {
-            if (_doc.IsReadOnly)
-            {
-                _doc.ConvertToUtf8(); // T-19 adds the explicit InfoBar flow; M0 converts on save.
-            }
-            var serialized = await Editor.SerializeForSaveAsync(_doc.OriginalText);
-            await _io.SaveAsync(_doc, serialized.Text, path, SaveOptions.Default);
-            Editor.MapDocumentFolder(_doc.Directory);
-            // Re-baseline the editor's dirty tracking without reloading: the next `changed` event reports dirty=false
-            // only when the document equals the loaded doc, so reload after Save As / first save (cheap for M0).
-            await Editor.LoadAsync(_doc.OriginalText, _doc.Path, false, CurrentSettings);
-            _dirty = false;
-            UpdateTitle();
-            UpdateStatus();
-            _log.LogInformation("saved {Path} ({Changed} changed blocks)", _doc.Path, serialized.ChangedBlocks.Length);
-            return true;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BridgeException)
-        {
-            _log.LogError(ex, "save failed: {Path}", path);
-            StatusText.Text = $"저장 실패: {ex.Message}";
-            return false;
-        }
+        var result = await picker.PickSaveFileAsync();
+        return result?.Path is { Length: > 0 } p ? p : null;
     }
 
-    /// <summary>PRD F-FILE-05: confirm before discarding unsaved changes. Returns false to cancel.</summary>
-    private async Task<bool> ConfirmDiscardAsync()
+    public async Task<DiscardChoice> ConfirmDiscardAsync(string fileName)
     {
-        if (!_dirty) return true;
         var dialog = new ContentDialog
         {
             XamlRoot = Root.XamlRoot,
             Title = "저장되지 않은 변경 사항",
-            Content = $"'{_doc.FileName}'의 변경 사항을 저장할까요?",
+            Content = $"'{fileName}'의 변경 사항을 저장할까요?",
             PrimaryButtonText = "저장",
             SecondaryButtonText = "저장 안 함",
             CloseButtonText = "취소",
             DefaultButton = ContentDialogButton.Primary,
         };
-        var r = await dialog.ShowAsync();
-        return r switch
+        return await dialog.ShowAsync() switch
         {
-            ContentDialogResult.Primary => await SaveAsync(saveAs: false),
-            ContentDialogResult.Secondary => true,
-            _ => false,
+            ContentDialogResult.Primary => DiscardChoice.Save,
+            ContentDialogResult.Secondary => DiscardChoice.Discard,
+            _ => DiscardChoice.Cancel,
         };
     }
 
-    private async void OnAppWindowClosing(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowClosingEventArgs args)
+    public void ShowInfo(string message, bool isError = false)
     {
-        if (_closeConfirmed || !_dirty) return;
-        args.Cancel = true;
-        if (await ConfirmDiscardAsync())
-        {
-            _closeConfirmed = true;
-            Close();
-        }
-    }
-
-    // ---------- editor events ----------
-
-    private void OnEditorChanged(object? sender, ChangedEvent e)
-    {
-        _lastChanged = e;
-        if (_dirty != e.Dirty)
-        {
-            _dirty = e.Dirty;
-            _doc.IsDirty = e.Dirty;
-            UpdateTitle();
-        }
-        UpdateStatus();
-    }
-
-    private async void OnEditorShortcut(object? sender, ShortcutEvent e)
-    {
-        try
-        {
-            switch (e.Key)
-            {
-                case "ctrl+s": await SaveAsync(saveAs: false); break;
-                case "ctrl+shift+s": await SaveAsync(saveAs: true); break;
-                case "ctrl+o": await OpenWithPickerAsync(); break;
-                case "ctrl+n": await NewDocumentAsync(); break;
-                default:
-                    _log.LogDebug("shortcut not handled yet: {Key}", e.Key);
-                    break;
-            }
-        }
-        catch (Exception ex)
-        {
-            _log.LogError(ex, "shortcut {Key} failed", e.Key);
-        }
-    }
-
-    private void OnRendererCrashed(object? sender, EventArgs e)
-    {
-        StatusText.Text = "편집기 프로세스가 중단되었습니다. (복구는 T-42)";
-    }
-
-    private void OnActualThemeChanged(FrameworkElement sender, object args)
-    {
-        if (!_editorReady) return;
-        _ = Editor.ExecuteAsync("view.setTheme", new { mode = Root.ActualTheme == ElementTheme.Dark ? "dark" : "light" });
-    }
-
-    // ---------- XAML handlers ----------
-
-    private async void OnNewClick(object sender, RoutedEventArgs e) => await NewDocumentAsync();
-    private async void OnOpenClick(object sender, RoutedEventArgs e) => await OpenWithPickerAsync();
-    private async void OnSaveClick(object sender, RoutedEventArgs e) => await SaveAsync(saveAs: false);
-
-    private async void OnAccelNew(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args) { args.Handled = true; await NewDocumentAsync(); }
-    private async void OnAccelOpen(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args) { args.Handled = true; await OpenWithPickerAsync(); }
-    private async void OnAccelSave(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args) { args.Handled = true; await SaveAsync(saveAs: false); }
-    private async void OnAccelSaveAs(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args) { args.Handled = true; await SaveAsync(saveAs: true); }
-
-    // ---------- presentation ----------
-
-    private void UpdateTitle()
-    {
-        Title = $"{(_dirty ? "● " : string.Empty)}{_doc.FileName} - MarkPad";
-    }
-
-    private void UpdateStatus()
-    {
-        var enc = _doc.Encoding.CodePage == 65001 ? (_doc.HasBom ? "UTF-8 BOM" : "UTF-8") : _doc.Encoding.WebName.ToUpperInvariant();
-        var eol = _doc.Eol == LineEnding.CrLf ? "CRLF" : "LF";
-        StatusText.Text = $"단어 {_lastChanged.Words:N0} · 글자 {_lastChanged.Chars:N0} · {enc} · {eol} · 줄 {_lastChanged.Line}";
-        SaveStateText.Text = _doc.IsReadOnly ? "읽기 전용 (저장 시 UTF-8 변환)" : _dirty ? "● 수정됨" : "저장됨 ✓";
+        Notice.Severity = isError ? InfoBarSeverity.Error : InfoBarSeverity.Informational;
+        Notice.Message = message;
+        Notice.IsOpen = true;
     }
 }
