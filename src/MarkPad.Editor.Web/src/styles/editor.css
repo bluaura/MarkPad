@@ -20,9 +20,44 @@
   --mp-selected: #d9e7f6;
   --mp-code-inline: #b3261e;
   --mp-link: #0067c0;
+  --mp-code-bg: #f6f8fa;
+  --mp-code-fg: #24292f;
+  --mp-find-bg: #fff2a8;
+  --mp-find-current-bg: #ffb84d;
+
+  /* syntax (light, GitHub-like) */
+  --mp-syn-keyword: #cf222e;
+  --mp-syn-string: #0a3069;
+  --mp-syn-number: #0550ae;
+  --mp-syn-comment: #6e7781;
+  --mp-syn-function: #8250df;
+  --mp-syn-type: #953800;
+  --mp-syn-variable: #24292f;
+  --mp-syn-tag: #116329;
+  --mp-syn-operator: #24292f;
+  --mp-syn-regexp: #0a3069;
+  --mp-syn-meta: #6e7781;
+  --mp-syn-invalid: #cf222e;
 }
 
 :root[data-theme='dark'] {
+  --mp-code-bg: #161b22;
+  --mp-code-fg: #e6edf3;
+  --mp-find-bg: #5c4b00;
+  --mp-find-current-bg: #9a6700;
+
+  --mp-syn-keyword: #ff7b72;
+  --mp-syn-string: #a5d6ff;
+  --mp-syn-number: #79c0ff;
+  --mp-syn-comment: #8b949e;
+  --mp-syn-function: #d2a8ff;
+  --mp-syn-type: #ffa657;
+  --mp-syn-variable: #e6edf3;
+  --mp-syn-tag: #7ee787;
+  --mp-syn-operator: #e6edf3;
+  --mp-syn-regexp: #a5d6ff;
+  --mp-syn-meta: #8b949e;
+  --mp-syn-invalid: #ff7b72;
   --mp-bg: #1f1f1f;
   --mp-fg: #e6e6e6;
   --mp-fg-muted: #a5a5a5;
@@ -166,6 +201,87 @@ body {
 
 .milkdown .ProseMirror ::selection {
   background: var(--mp-selected);
+}
+
+/* ---- GFM extras (PRD F-VIEW-01) ---- */
+.milkdown .ProseMirror ul,
+.milkdown .ProseMirror ol {
+  padding-left: 1.6em;
+  margin: 0 0 1em;
+}
+.milkdown .ProseMirror li > p {
+  margin: 0.15em 0;
+}
+.milkdown .ProseMirror ul ul,
+.milkdown .ProseMirror ol ul,
+.milkdown .ProseMirror ul ol,
+.milkdown .ProseMirror ol ol {
+  margin-bottom: 0;
+}
+.milkdown .ProseMirror del {
+  color: var(--mp-fg-muted);
+}
+.milkdown .ProseMirror dl[data-type='footnote_definition'],
+.milkdown .ProseMirror .footnote-definition {
+  font-size: 0.9em;
+  color: var(--mp-fg-muted);
+  border-top: 1px solid var(--mp-border);
+  padding-top: 0.5em;
+  margin-top: 1.5em;
+}
+.milkdown .ProseMirror sup[data-type='footnote_ref'],
+.milkdown .ProseMirror .footnote-ref {
+  color: var(--mp-link);
+  font-size: 0.75em;
+  vertical-align: super;
+}
+
+/* ---- code blocks (CodeMirror) ---- */
+.milkdown .cm-editor {
+  border-radius: 6px;
+  border: 1px solid var(--mp-border);
+}
+.mp-hide-gutters .cm-gutters {
+  display: none !important;
+}
+
+/* ---- find/replace highlights (F-EDIT-11) ---- */
+.milkdown .mp-find-match {
+  background: var(--mp-find-bg);
+  border-radius: 2px;
+}
+.milkdown .mp-find-current {
+  background: var(--mp-find-current-bg);
+  outline: 1px solid var(--mp-accent);
+}
+
+/* ---- context bar for tables / code blocks (ADR-07) ---- */
+.markpad-editor {
+  position: relative;
+}
+.mp-context-bar {
+  position: absolute;
+  z-index: 20;
+  display: none;
+  gap: 2px;
+  padding: 3px;
+  background: var(--mp-surface);
+  border: 1px solid var(--mp-border);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  font: 12px var(--mp-font-family);
+}
+.mp-context-bar button {
+  border: 0;
+  background: transparent;
+  color: var(--mp-fg);
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.mp-context-bar button:hover {
+  background: var(--mp-hover);
 }
 
 /* Dev-mode banner when running outside WebView2 */

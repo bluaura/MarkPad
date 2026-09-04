@@ -38,6 +38,7 @@ public sealed partial class MainWindow : Window, IDialogService
             App.Current.Services.GetRequiredService<Core.Mru.RecentFilesStore>(),
             App.Current.Services.GetRequiredService<JumpListService>(),
             _theme,
+            App.Current.Services.GetRequiredService<Core.Assets.AssetService>(),
             this,
             App.Current.Services.GetRequiredService<ILogger<ShellViewModel>>());
 
@@ -48,6 +49,8 @@ public sealed partial class MainWindow : Window, IDialogService
         Root.RequestedTheme = _theme.RequestedTheme;
 
         Toolbar.ViewModel = ViewModel.Toolbar;
+        FindBarControl.ViewModel = ViewModel.Find;
+        ViewModel.Toolbar.LinkFlyoutRequested += (_, _) => Toolbar.ShowLinkFlyout();
         ViewModel.Tabs.CollectionChanged += OnTabsCollectionChanged;
         ViewModel.PropertyChanged += OnShellPropertyChanged;
         AppWindow.Closing += OnAppWindowClosing;
@@ -311,6 +314,53 @@ public sealed partial class MainWindow : Window, IDialogService
         }
         var result = await picker.PickSaveFileAsync();
         return result?.Path is { Length: > 0 } p ? p : null;
+    }
+
+    public async Task<string?> PickImageAsync()
+    {
+        var picker = new FileOpenPicker(AppWindow.Id)
+        {
+            SuggestedStartLocation = PickerLocationId.PicturesLibrary,
+            CommitButtonText = "삽입",
+            ViewMode = PickerViewMode.Thumbnail,
+        };
+        foreach (var ext in new[] { ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".avif" }) picker.FileTypeFilter.Add(ext);
+        var result = await picker.PickSingleFileAsync();
+        return result?.Path is { Length: > 0 } p ? p : null;
+    }
+
+    public async Task<ImageInsertMode> AskImageInsertModeAsync(string fileName)
+    {
+        var dialog = new ContentDialog
+        {
+            XamlRoot = Root.XamlRoot,
+            Title = "이미지 삽입",
+            Content = $"'{fileName}'을(를) 문서의 '{_settings.Current.Images.FolderName}' 폴더로 복사할까요, 아니면 원본 경로를 그대로 참조할까요?",
+            PrimaryButtonText = "복사",
+            SecondaryButtonText = "원본 경로 참조",
+            CloseButtonText = "취소",
+            DefaultButton = ContentDialogButton.Primary,
+        };
+        return await dialog.ShowAsync() switch
+        {
+            ContentDialogResult.Primary => ImageInsertMode.Copy,
+            ContentDialogResult.Secondary => ImageInsertMode.Reference,
+            _ => ImageInsertMode.Cancel,
+        };
+    }
+
+    public async Task<bool> ConfirmAsync(string title, string message, string primaryText)
+    {
+        var dialog = new ContentDialog
+        {
+            XamlRoot = Root.XamlRoot,
+            Title = title,
+            Content = message,
+            PrimaryButtonText = primaryText,
+            CloseButtonText = "취소",
+            DefaultButton = ContentDialogButton.Primary,
+        };
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
     }
 
     public async Task<DiscardChoice> ConfirmDiscardAsync(string fileName)

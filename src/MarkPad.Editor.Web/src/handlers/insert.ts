@@ -3,6 +3,7 @@ import type {
   InsertCodeBlockParams,
   InsertImageParams,
   InsertLinkParams,
+  InsertMathParams,
   InsertTableParams,
   InsertTextParams,
 } from '../bridge-types'
@@ -41,8 +42,20 @@ export function registerInsertHandlers(): void {
     return null
   })
 
+  bridge.register('insert.math', (raw) => {
+    const p = raw as InsertMathParams | undefined
+    cmd.insertMath(requireSession().editor, !!p?.display)
+    return null
+  })
+
+  bridge.register('insert.footnote', (raw) => {
+    const p = raw as InsertTextParams | undefined
+    cmd.insertFootnote(requireSession().editor, p?.text ?? '')
+    return null
+  })
+
   bridge.register('insert.datetime', (raw) => {
-    const p = raw as InsertTextParams
+    const p = raw as InsertTextParams | undefined
     cmd.insertText(requireSession().editor, p?.text ?? formatNow())
     return null
   })

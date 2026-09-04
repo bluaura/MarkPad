@@ -2,8 +2,13 @@ import { Crepe } from '@milkdown/crepe'
 import { remarkStringifyOptionsCtx } from '@milkdown/kit/core'
 import { remarkPreserveEmptyLinePlugin } from '@milkdown/kit/preset/commonmark'
 import type { EditorSettings } from './bridge-types'
+import { markPadCodeExtensions, markPadCodeTheme } from './codemirror-theme'
 import { codeMetaPlugin } from './plugins/code-meta'
+import { contextBarPlugin } from './plugins/context-bar'
+import { findPlugin } from './plugins/find'
+import { formatKeymap } from './plugins/format-keymap'
 import { imageAltPlugin } from './plugins/image-alt'
+import { linkClickPlugin } from './plugins/link-click'
 
 export interface CrepeFactoryOptions {
   /** Headless (vitest/jsdom): skip features that need layout or a host. */
@@ -35,10 +40,25 @@ export function buildCrepe(root: HTMLElement, defaultValue: string, settings: Ed
       [Crepe.Feature.ImageBlock]: {
         ...(opts.onUpload ? { onUpload: opts.onUpload, inlineOnUpload: opts.onUpload, blockOnUpload: opts.onUpload } : {}),
         ...(opts.proxyDomURL ? { proxyDomURL: opts.proxyDomURL } : {}),
+        blockUploadPlaceholderText: '이미지를 붙여넣거나 끌어다 놓으세요',
+        blockCaptionPlaceholderText: '캡션',
+        inlineUploadPlaceholderText: '이미지 URL 또는 파일',
       },
       [Crepe.Feature.Placeholder]: {
         text: '내용을 입력하세요…',
         mode: 'doc',
+      },
+      [Crepe.Feature.CodeMirror]: {
+        // CSS-variable theme so code blocks follow light/dark (T-33); languages: Crepe default (128, lazy).
+        theme: markPadCodeTheme,
+        extensions: markPadCodeExtensions,
+        searchPlaceholder: '언어 검색',
+        noResultText: '결과 없음',
+        copyText: '복사',
+        previewLabel: '미리보기',
+      },
+      [Crepe.Feature.LinkTooltip]: {
+        inputPlaceholder: '링크 주소 입력…',
       },
     },
   })
@@ -47,6 +67,12 @@ export function buildCrepe(root: HTMLElement, defaultValue: string, settings: Ed
   crepe.editor.remove(remarkPreserveEmptyLinePlugin)
   crepe.editor.use(imageAltPlugin)
   crepe.editor.use(codeMetaPlugin)
+  crepe.editor.use(formatKeymap)
+  crepe.editor.use(findPlugin)
+  if (!headless) {
+    crepe.editor.use(linkClickPlugin)
+    crepe.editor.use(contextBarPlugin)
+  }
 
   // Serialization style for NEW/changed blocks (PRD F-SET-04). Untouched blocks keep the original (§5).
   crepe.editor.config((ctx) => {

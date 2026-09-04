@@ -4,6 +4,7 @@ import './styles/editor.css'
 import { bridge } from './bridge'
 import type { EditorSettings } from './bridge-types'
 import { registerDocHandlers } from './handlers/doc'
+import { registerFindHandlers } from './handlers/find'
 import { registerFormatHandlers } from './handlers/format'
 import { registerInsertHandlers } from './handlers/insert'
 import { registerViewHandlers } from './handlers/view'
@@ -17,6 +18,7 @@ registerDocHandlers()
 registerFormatHandlers()
 registerInsertHandlers()
 registerViewHandlers()
+registerFindHandlers()
 installHostKeymap()
 installFileDrop()
 applyTheme(defaultTheme)

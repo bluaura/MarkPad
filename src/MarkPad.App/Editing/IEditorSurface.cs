@@ -26,7 +26,13 @@ public interface IEditorSurface : IAsyncDisposable
     /// <summary>Re-baseline dirty tracking after a successful save without reloading.</summary>
     Task MarkSavedAsync();
 
+    /// <summary>The document moved (Save As / first save): remap relative resources such as images.</summary>
+    Task SetDocumentPathAsync(string? path, string displayRoot);
+
     Task ExecuteAsync(string method, object? parameters = null);
+
+    /// <summary>Find/replace (PRD F-EDIT-11). Results also arrive through <see cref="FindResultChanged"/>.</summary>
+    Task<FindResult> FindAsync(string method, object? parameters = null);
 
     Task SetReadOnlyAsync(bool readOnly);
 
@@ -38,6 +44,9 @@ public interface IEditorSurface : IAsyncDisposable
     event EventHandler<SelectionContext>? SelectionChanged;
     event EventHandler<ShortcutEvent>? ShortcutRequested;
     event EventHandler<DroppedTextFile>? TextFileDropped;
+    event EventHandler<FindResult>? FindResultChanged;
+    /// <summary>Ctrl+click on a link (href as written in the document).</summary>
+    event EventHandler<string>? LinkOpenRequested;
 }
 
 /// <summary>A .md/.txt file dropped onto the editor page; WebView2 exposes content but no path.</summary>

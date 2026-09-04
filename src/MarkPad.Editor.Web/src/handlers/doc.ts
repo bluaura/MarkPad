@@ -1,5 +1,12 @@
 import { bridge, BridgeError } from '../bridge'
-import type { DocLoadParams, DocSerializeParams, DocSerializeResult, SetReadonlyParams } from '../bridge-types'
+import type {
+  DocLoadParams,
+  DocSerializeParams,
+  DocSerializeResult,
+  RewriteAssetPathsParams,
+  RewriteAssetPathsResult,
+  SetReadonlyParams,
+} from '../bridge-types'
 import { createEditor } from '../editor'
 import { joinFrontMatter, splitFrontMatter } from '../frontmatter'
 import { roundTrip } from '../roundtrip'
@@ -63,5 +70,24 @@ export function registerDocHandlers(): void {
   bridge.register('doc.markSaved', () => {
     requireSession().editor.markSaved()
     return null
+  })
+
+  // F-IMG-04: after the first save, pending-asset paths that were renamed on relocation are rewritten in place.
+  bridge.register('doc.rewriteAssetPaths', (raw): RewriteAssetPathsResult => {
+    const p = raw as RewriteAssetPathsParams
+    const map = p?.map ?? {}
+    const view = requireSession().editor.view()
+    let count = 0
+    const tr = view.state.tr
+    view.state.doc.descendants((node, pos) => {
+      const src = node.attrs['src']
+      if (typeof src === 'string' && Object.hasOwn(map, src) && (node.type.name === 'image' || node.type.name === 'image-block')) {
+        tr.setNodeMarkup(pos, undefined, { ...node.attrs, src: map[src] })
+        count++
+      }
+      return true
+    })
+    if (count > 0) view.dispatch(tr)
+    return { count }
   })
 }

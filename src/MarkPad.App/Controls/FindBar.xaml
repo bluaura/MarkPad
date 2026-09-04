@@ -1,0 +1,49 @@
+<UserControl
+    x:Class="MarkPad.App.Controls.FindBar"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Visibility="{x:Bind ViewModel.IsOpen, Mode=OneWay}">
+    <Grid Padding="12,6" ColumnSpacing="6" RowSpacing="6"
+          Background="{ThemeResource LayerFillColorDefaultBrush}"
+          BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+          BorderThickness="0,0,0,1">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" MaxWidth="420" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ToggleButton Grid.Row="0" Grid.Column="0" IsChecked="{x:Bind ViewModel.ShowReplace, Mode=OneWay}" Command="{x:Bind ViewModel.ToggleReplaceCommand}" Padding="6,4" ToolTipService.ToolTip="바꾸기 표시 (Ctrl+H)" AutomationProperties.Name="바꾸기 표시">
+            <FontIcon Glyph="&#xE70D;" FontSize="12" />
+        </ToggleButton>
+        <TextBox x:Name="QueryBox" Grid.Row="0" Grid.Column="1" PlaceholderText="찾기" Text="{x:Bind ViewModel.Query, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" KeyDown="OnQueryKeyDown" AutomationProperties.Name="찾기" />
+        <ToggleButton Grid.Row="0" Grid.Column="2" IsChecked="{x:Bind ViewModel.CaseSensitive, Mode=TwoWay}" Content="Aa" Padding="8,4" ToolTipService.ToolTip="대소문자 구분" AutomationProperties.Name="대소문자 구분" />
+        <ToggleButton Grid.Row="0" Grid.Column="3" IsChecked="{x:Bind ViewModel.WholeWord, Mode=TwoWay}" Content="ab" Padding="8,4" FontFamily="Consolas" ToolTipService.ToolTip="전체 단어" AutomationProperties.Name="전체 단어" />
+        <Button Grid.Row="0" Grid.Column="4" Command="{x:Bind ViewModel.PreviousCommand}" Padding="8,4" ToolTipService.ToolTip="이전 (Shift+Enter)" AutomationProperties.Name="이전">
+            <FontIcon Glyph="&#xE70E;" FontSize="12" />
+        </Button>
+        <Button Grid.Row="0" Grid.Column="5" Command="{x:Bind ViewModel.NextCommand}" Padding="8,4" ToolTipService.ToolTip="다음 (Enter)" AutomationProperties.Name="다음">
+            <FontIcon Glyph="&#xE70D;" FontSize="12" />
+        </Button>
+        <TextBlock Grid.Row="0" Grid.Column="6" Text="{x:Bind ViewModel.ResultLabel, Mode=OneWay}" VerticalAlignment="Center" MinWidth="64" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+        <Button Grid.Row="0" Grid.Column="8" Command="{x:Bind ViewModel.CloseCommand}" Padding="8,4" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="닫기 (Esc)" AutomationProperties.Name="닫기">
+            <FontIcon Glyph="&#xE711;" FontSize="12" />
+        </Button>
+
+        <TextBox x:Name="ReplaceBox" Grid.Row="1" Grid.Column="1" PlaceholderText="바꾸기" Text="{x:Bind ViewModel.Replacement, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Visibility="{x:Bind ViewModel.ShowReplace, Mode=OneWay}" KeyDown="OnReplaceKeyDown" AutomationProperties.Name="바꾸기" />
+        <StackPanel Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="5" Orientation="Horizontal" Spacing="6" Visibility="{x:Bind ViewModel.ShowReplace, Mode=OneWay}">
+            <Button Content="바꾸기" Command="{x:Bind ViewModel.ReplaceCommand}" Padding="10,4" />
+            <Button Content="모두 바꾸기" Command="{x:Bind ViewModel.ReplaceAllCommand}" Padding="10,4" />
+        </StackPanel>
+    </Grid>
+</UserControl>

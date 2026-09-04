@@ -34,6 +34,7 @@ export function computeSelectionContext(state: EditorState): SelectionContext {
     inCode: false,
     codeLang: null,
     link,
+    hasSelection: !empty,
   }
 
   if (state.selection instanceof NodeSelection && state.selection.node.type.name === 'code_block') {

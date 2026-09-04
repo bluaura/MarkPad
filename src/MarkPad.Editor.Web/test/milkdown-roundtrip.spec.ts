@@ -63,7 +63,7 @@ describe('Milkdown round-trip (corpus)', () => {
       writeFileSync(join(reportDir, 'roundtrip-diff', file), out)
     }
     expect(ok, `${file}: ${r.changedBlocks.length} block(s) re-serialized`).toBe(true)
-  })
+  }, 60_000) // large READMEs (400KB+) exceed vitest's 5s default
 
   it('writes the corpus report', () => {
     if (files.length === 0) return

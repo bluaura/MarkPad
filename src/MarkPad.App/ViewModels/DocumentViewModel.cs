@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using MarkPad.App.Bridge;
 using MarkPad.App.Editing;
 using MarkPad.App.Services;
+using MarkPad.Core.Assets;
 using MarkPad.Core.Documents;
 using MarkPad.Core.Settings;
 
@@ -18,14 +19,16 @@ public sealed partial class DocumentViewModel : ObservableObject, IAsyncDisposab
     private readonly DocumentIO _io;
     private readonly ThemeService _theme;
     private readonly SettingsStore _settings;
+    private readonly AssetService _assets;
     private readonly string? _suggestedName;
 
-    public DocumentViewModel(Document document, DocumentIO io, ThemeService theme, SettingsStore settings, string? suggestedName = null)
+    public DocumentViewModel(Document document, DocumentIO io, ThemeService theme, SettingsStore settings, AssetService assets, string? suggestedName = null)
     {
         Document = document;
         _io = io;
         _theme = theme;
         _settings = settings;
+        _assets = assets;
         _suggestedName = suggestedName;
         IsDirty = document.IsDirty;
         IsReadOnly = document.IsReadOnly;
@@ -71,6 +74,8 @@ public sealed partial class DocumentViewModel : ObservableObject, IAsyncDisposab
     public event EventHandler? SurfaceAttached;
     public event EventHandler<ShortcutEvent>? ShortcutRequested;
     public event EventHandler<DroppedTextFile>? TextFileDropped;
+    /// <summary>Ctrl+click on a link; the shell resolves it against <see cref="Document"/>'s folder (PRD F-VIEW-04).</summary>
+    public event EventHandler<string>? LinkOpenRequested;
 
     public async Task AttachSurfaceAsync(IEditorSurface surface)
     {
@@ -79,6 +84,11 @@ public sealed partial class DocumentViewModel : ObservableObject, IAsyncDisposab
         surface.ContentChanged += OnContentChanged;
         surface.ShortcutRequested += (_, e) => ShortcutRequested?.Invoke(this, e);
         surface.TextFileDropped += (_, e) => TextFileDropped?.Invoke(this, e);
+        surface.LinkOpenRequested += (_, href) => LinkOpenRequested?.Invoke(this, href);
+        if (surface is WebEditorSurface web)
+        {
+            web.Host.AssetSaveHandler = SaveAssetAsync;
+        }
         await LoadIntoSurfaceAsync();
         SurfaceAttached?.Invoke(this, EventArgs.Empty);
     }
@@ -88,6 +98,7 @@ public sealed partial class DocumentViewModel : ObservableObject, IAsyncDisposab
         if (Surface is null) return;
         var options = new EditorLoadOptions(Document.Path, Document.IsReadOnly, _theme.BuildEditorSettings());
         await Surface.LoadAsync(Document.OriginalText, options);
+        await Surface.SetDocumentPathAsync(Document.Path, _assets.DisplayRootFor(Document));
         IsLoaded = true;
         RefreshLabels();
         if (Document.IsDirty)
@@ -106,14 +117,29 @@ public sealed partial class DocumentViewModel : ObservableObject, IAsyncDisposab
         await LoadIntoSurfaceAsync();
     }
 
-    /// <summary>Serialize through the surface and write atomically. Caller handles pickers and errors.</summary>
+    /// <summary>
+    /// Serialize through the surface and write atomically. On the first save, pending images move next to the
+    /// document first (PRD F-IMG-04) so the saved markdown already carries final links. Caller handles pickers/errors.
+    /// </summary>
     public async Task SaveAsync(string? newPath = null)
     {
         if (Surface is null) throw new InvalidOperationException("no surface");
         if (Document.IsReadOnly) throw new InvalidOperationException("document is read-only");
+
+        var target = newPath ?? Document.Path ?? throw new InvalidOperationException("no path");
+        if (Document.Path is null || !string.Equals(System.IO.Path.GetDirectoryName(target), Document.Directory, StringComparison.OrdinalIgnoreCase))
+        {
+            var renamed = await _assets.RelocatePendingAsync(Document, target);
+            if (renamed.Count > 0)
+            {
+                await Surface.ExecuteAsync("doc.rewriteAssetPaths", new RewriteAssetPathsParams(new Dictionary<string, string>(renamed)));
+            }
+        }
+
         var text = await Surface.SerializeForSaveAsync(Document.OriginalText);
         await _io.SaveAsync(Document, text, newPath, _settings.ToSaveOptions());
         await Surface.MarkSavedAsync();
+        await Surface.SetDocumentPathAsync(Document.Path, _assets.DisplayRootFor(Document));
         IsDirty = false;
         RefreshLabels();
         OnPropertyChanged(nameof(Path));
@@ -127,6 +153,23 @@ public sealed partial class DocumentViewModel : ObservableObject, IAsyncDisposab
         IsDirty = true;
         RefreshLabels();
         if (Surface is not null) await Surface.SetReadOnlyAsync(false);
+    }
+
+    /// <summary>Toolbar image button / Ctrl+Shift+I (PRD F-IMG-02): copy into assets or reference the original path.</summary>
+    public async Task InsertImageFromFileAsync(string filePath, bool copy)
+    {
+        if (Surface is null) return;
+        var src = copy ? await _assets.CopyImageAsync(Document, filePath) : filePath;
+        await Surface.ExecuteAsync("insert.image", new InsertImageParams(src, System.IO.Path.GetFileNameWithoutExtension(filePath)));
+        await Surface.FocusAsync();
+    }
+
+    private async Task<AssetSaveResult> SaveAssetAsync(AssetSaveParams p)
+    {
+        var bytes = Convert.FromBase64String(p.BytesBase64);
+        var rel = await _assets.SaveImageAsync(Document, bytes, p.Mime, p.SuggestedName);
+        IsDirty = true;
+        return new AssetSaveResult(rel);
     }
 
     public Task ApplyThemeAsync() => Surface?.SetThemeAsync(_theme.BuildEditorTheme()) ?? Task.CompletedTask;
@@ -175,9 +218,11 @@ public sealed partial class DocumentViewModel : ObservableObject, IAsyncDisposab
 
     public async ValueTask DisposeAsync()
     {
+        if (Document.Path is null) _assets.DiscardPending(Document);
         if (Surface is not null)
         {
             Surface.ContentChanged -= OnContentChanged;
+            if (Surface is WebEditorSurface web) web.Host.AssetSaveHandler = null;
             await Surface.DisposeAsync();
             Surface = null;
         }

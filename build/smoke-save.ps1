@@ -8,6 +8,8 @@ $ErrorActionPreference = 'Stop'
 Add-Type -Name Dpi -Namespace MarkPadTools -MemberDefinition @'
 [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
 [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+[DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+[DllImport("user32.dll")] public static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
 [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
 [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extra);
 [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L, T, R, B; }
@@ -26,13 +28,19 @@ $original = "# Smoke`r`n`r`nFirst paragraph with __strong__ text.`r`n`r`n* item 
 
 $proc = Start-Process -FilePath $exe -ArgumentList @("`"$file`"") -PassThru
 Start-Sleep -Seconds 8
+# A background process may only take the foreground while a key is down: press ALT around SetForegroundWindow.
+[MarkPadTools.Dpi]::keybd_event(0x12, 0, 0, [UIntPtr]::Zero)
 [MarkPadTools.Dpi]::SetForegroundWindow($proc.MainWindowHandle) | Out-Null
-Start-Sleep -Milliseconds 800
+[MarkPadTools.Dpi]::keybd_event(0x12, 0, 2, [UIntPtr]::Zero)
+Start-Sleep -Milliseconds 500
+if ([MarkPadTools.Dpi]::GetForegroundWindow() -ne $proc.MainWindowHandle) {
+    Stop-Process -Id $proc.Id -Force
+    throw 'MarkPad window is not in the foreground; refusing to send keys to another window.'
+}
 
 # Cursor lands at the document start (heading). Move to the end of the heading and append text.
 # WScript.Shell uses SendInput, which works where the WinForms journal-hook based SendKeys is denied.
 $ws = New-Object -ComObject WScript.Shell
-$ws.AppActivate($proc.Id) | Out-Null
 Start-Sleep -Milliseconds 300
 # Click into the document body (below toolbar, centered) so keyboard focus is inside the WebView.
 $r = New-Object MarkPadTools.Dpi+RECT

@@ -271,6 +271,7 @@ bridge.emit('ready', { version })
 
 #### 이미지 처리
 - 붙여넣기/드롭: Crepe `ImageBlock` feature의 `onUpload(file)` 훅 → `bridge.call('asset.save', {bytesBase64, mime})` → 호스트가 `assets/...` 상대 경로 반환 → 노드 `src`에 저장.
+- 미저장 문서(F-IMG-04): `AssetService`가 `%LOCALAPPDATA%\MarkPad\pending-assets\{pid}-{docId}\assets\`에 저장하고 `doc.markpad`를 그 pending 폴더에 매핑한다. 폴더 구조가 최종 구조와 같으므로 상대 링크 `assets/x.png`는 첫 저장 전후로 동일하며, 저장 시 `RelocatePendingAsync`가 파일을 옮기고 **이름 충돌로 바뀐 경로만** `doc.rewriteAssetPaths`로 재작성한다. 저장·직렬화보다 먼저 실행해 저장된 md가 최종 경로를 갖게 한다.
 - 렌더: `imageResolverPlugin`이 `<img src>`를 표시용 URL로 변환한다. 모델(`src` 속성)은 원본 문자열을 유지하고, DOM에만 변환값을 쓴다.
 
 | src 형태 | 표시 URL |
@@ -349,9 +350,10 @@ bridge.emit('ready', { version })
 | `insert.link` | `{text?, href}` | | |
 | `insert.image` | `{src, alt?}` | | |
 | `insert.math` | `{display: bool}` | | |
-| `insert.footnote` / `insert.datetime` | `{text}` | | |
+| `insert.footnote` / `insert.datetime` | `{text}` | | 각주는 `[^n]` 참조 + 문서 끝 정의 블록 |
+| `doc.rewriteAssetPaths` | `{map: {old: new}}` | `{count}` | 첫 저장 시 pending 이미지 이름 충돌로 바뀐 경로만 재작성 (F-IMG-04) |
 | `table.*` | `addRowAbove/Below, addColLeft/Right, delRow, delCol, align{dir}, delete, toggleHeader` | | F-EDIT-07 |
-| `find.set/next/prev/replace/replaceAll/clear` | `{query, caseSensitive, wholeWord, replacement?}` | `{count, index}` | F-EDIT-11 |
+| `find.set/next/prev/replace/replaceAll/clear` | `{query, caseSensitive, wholeWord}` / `{replacement}` | `{count, index}` (+`replaced`) | F-EDIT-11. 전체 단어는 `\p{L}\p{N}` 룩어라운드(한글 대응). `replaceAll`은 트랜잭션 1개 → undo 1회 |
 | `outline.goto` | `{pos}` | | F-VIEW-05 |
 | `view.setTheme` | `{mode, font…, zoom}` | | F-VIEW-08 |
 | `view.focus` / `view.scrollToTop` | | | |
@@ -376,7 +378,8 @@ bridge.emit('ready', { version })
 | req | `asset.pick` | — → `{relPath, alt}` (파일 대화상자) |
 | req | `asset.readBase64` | `{src}` → `{dataUrl}` (HTML 내보내기 임베드용) |
 | req | `link.open` | `{href}` → `{ok}` (외부 브라우저 또는 md 새 탭) |
-| req | `image.resolve` | `{src}` → `{url}` (드라이브 매핑이 필요한 절대 경로) |
+| req | `image.resolve` | `{src}` → `{url}` (드라이브 매핑이 필요한 절대 경로: `C:\x\a.png` / `file:///C:/x/a.png` → `https://drive-c.markpad/x/a.png`, 드라이브별 지연 매핑) |
+| evt | `find.result` | `{count, index}` |
 
 C# DTO는 `Bridge/BridgeMessages.cs`에 `record`로 정의하고 `System.Text.Json` source generator를 쓴다. JS 타입은 `bridge-types.ts`에 동일 이름으로 정의하며, 양쪽 스키마 드리프트를 막기 위해 `npm run gen:types`로 C# → TS 타입을 생성한다(M1, 선택).
 

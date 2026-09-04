@@ -1,14 +1,17 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MarkPad.App.Bridge;
 using MarkPad.App.Editing;
 using MarkPad.App.Services;
+using MarkPad.Core.Assets;
 using MarkPad.Core.Documents;
 using MarkPad.Core.Mru;
 using MarkPad.Core.Settings;
 using Microsoft.Extensions.Logging;
+using Windows.System;
 
 namespace MarkPad.App.ViewModels;
 
@@ -20,6 +23,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly RecentFilesStore _recent;
     private readonly JumpListService _jumpList;
     private readonly ThemeService _theme;
+    private readonly AssetService _assets;
     private readonly IDialogService _dialogs;
     private readonly ILogger<ShellViewModel> _log;
 
@@ -29,6 +33,7 @@ public sealed partial class ShellViewModel : ObservableObject
         RecentFilesStore recent,
         JumpListService jumpList,
         ThemeService theme,
+        AssetService assets,
         IDialogService dialogs,
         ILogger<ShellViewModel> log)
     {
@@ -37,20 +42,27 @@ public sealed partial class ShellViewModel : ObservableObject
         _recent = recent;
         _jumpList = jumpList;
         _theme = theme;
+        _assets = assets;
         _dialogs = dialogs;
         _log = log;
         ShowToolbar = settings.Current.Ui.ShowToolbar;
+        Find = new FindViewModel(() => SelectedTab?.Surface);
+        Toolbar.ShowHighlight = settings.Current.Markdown.ExtHighlight;
+        Toolbar.ImageInsertRequested += (_, _) => _ = InsertImageAsync();
         Tabs.CollectionChanged += OnTabsChanged;
         _recent.Changed += (_, _) => OnPropertyChanged(nameof(RecentFiles));
         _theme.ActualThemeChanged += async (_, _) =>
         {
             foreach (var t in Tabs) await t.ApplyThemeAsync();
         };
+        _settings.Changed += (_, _) => Toolbar.ShowHighlight = _settings.Current.Markdown.ExtHighlight;
     }
 
     public ObservableCollection<DocumentViewModel> Tabs { get; } = [];
 
     public ToolbarViewModel Toolbar { get; } = new();
+
+    public FindViewModel Find { get; }
 
     public IReadOnlyList<RecentFile> RecentFiles => _recent.Items;
 
@@ -66,7 +78,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (oldValue is not null) oldValue.SurfaceAttached -= OnSelectedSurfaceAttached;
         if (newValue is not null) newValue.SurfaceAttached += OnSelectedSurfaceAttached;
-        AttachToolbar(newValue);
+        AttachSurfaces(newValue);
     }
 
     partial void OnShowToolbarChanged(bool value)
@@ -74,12 +86,13 @@ public sealed partial class ShellViewModel : ObservableObject
         _ = _settings.UpdateAsync(s => s.Ui.ShowToolbar = value);
     }
 
-    private void OnSelectedSurfaceAttached(object? sender, EventArgs e) => AttachToolbar(sender as DocumentViewModel);
+    private void OnSelectedSurfaceAttached(object? sender, EventArgs e) => AttachSurfaces(sender as DocumentViewModel);
 
-    private void AttachToolbar(DocumentViewModel? tab)
+    private void AttachSurfaces(DocumentViewModel? tab)
     {
         var surface = tab?.Surface;
         Toolbar.Attach(surface is { SupportsFormatting: true } ? surface : null);
+        Find.Reattach(surface);
     }
 
     private void OnTabsChanged(object? sender, NotifyCollectionChangedEventArgs e) => OnPropertyChanged(nameof(HasTabs));
@@ -88,9 +101,10 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private DocumentViewModel CreateTab(Document document, string? suggestedName = null)
     {
-        var vm = new DocumentViewModel(document, _io, _theme, _settings, suggestedName);
+        var vm = new DocumentViewModel(document, _io, _theme, _settings, _assets, suggestedName);
         vm.ShortcutRequested += (_, e) => _ = HandleShortcutAsync(e.Key);
         vm.TextFileDropped += (_, e) => OpenDroppedText(e);
+        vm.LinkOpenRequested += (s, href) => _ = OpenLinkAsync((DocumentViewModel)s!, href);
         Tabs.Add(vm);
         SelectedTab = vm;
         return vm;
@@ -161,6 +175,69 @@ public sealed partial class ShellViewModel : ObservableObject
 
     [RelayCommand]
     private Task RemoveRecentAsync(RecentFile? file) => file is null ? Task.CompletedTask : _recent.RemoveAsync(file.Path);
+
+    // ---------- links (PRD F-VIEW-04, T-25) ----------
+
+    private async Task OpenLinkAsync(DocumentViewModel tab, string href)
+    {
+        try
+        {
+            if (href.StartsWith('#')) return; // in-document anchor: no-op until outline (T-45)
+            if (Uri.TryCreate(href, UriKind.Absolute, out var uri) && !uri.IsFile)
+            {
+                if (uri.Scheme is "http" or "https" or "mailto") await Launcher.LaunchUriAsync(uri);
+                return;
+            }
+
+            var local = uri is { IsFile: true } ? uri.LocalPath : Uri.UnescapeDataString(href.Split('#')[0]);
+            if (!Path.IsPathRooted(local))
+            {
+                var baseDir = tab.Document.Directory ?? Environment.CurrentDirectory;
+                local = Path.GetFullPath(Path.Combine(baseDir, local.Replace('/', Path.DirectorySeparatorChar)));
+            }
+
+            if (!File.Exists(local))
+            {
+                _dialogs.ShowInfo($"파일을 찾을 수 없습니다: {local}");
+                return;
+            }
+            if (ActivationService.IsOpenable(local))
+            {
+                await OpenFilesAsync([local]);
+                return;
+            }
+            if (await _dialogs.ConfirmAsync("파일 열기", $"'{Path.GetFileName(local)}'을(를) 연결된 프로그램으로 열까요?\n{local}", "열기"))
+            {
+                Process.Start(new ProcessStartInfo(local) { UseShellExecute = true });
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
+        {
+            _log.LogError(ex, "link open failed: {Href}", href);
+            _dialogs.ShowInfo($"링크를 열 수 없습니다: {ex.Message}", isError: true);
+        }
+    }
+
+    // ---------- images (PRD F-IMG-02) ----------
+
+    public async Task InsertImageAsync()
+    {
+        var tab = SelectedTab;
+        if (tab?.Surface is not { SupportsFormatting: true }) return;
+        var path = await _dialogs.PickImageAsync();
+        if (path is null) return;
+        var mode = await _dialogs.AskImageInsertModeAsync(Path.GetFileName(path));
+        if (mode == ImageInsertMode.Cancel) return;
+        try
+        {
+            await tab.InsertImageFromFileAsync(path, copy: mode == ImageInsertMode.Copy);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BridgeException)
+        {
+            _log.LogError(ex, "image insert failed: {Path}", path);
+            _dialogs.ShowInfo($"이미지 삽입 실패: {ex.Message}", isError: true);
+        }
+    }
 
     // ---------- save ----------
 
@@ -303,8 +380,12 @@ public sealed partial class ShellViewModel : ObservableObject
                 case "ctrl+tab": NextTab(); break;
                 case "ctrl+shift+tab": PreviousTab(); break;
                 case "ctrl+shift+t": ToggleToolbar(); break;
+                case "ctrl+f": Find.Open(replace: false); break;
+                case "ctrl+h": Find.Open(replace: true); break;
+                case "ctrl+k": Toolbar.RequestLinkFlyout(); break;
+                case "ctrl+shift+i": await InsertImageAsync(); break;
                 case "f5":
-                    if (SelectedTab?.Surface is { } s) await s.ExecuteAsync("insert.datetime");
+                    if (SelectedTab?.Surface is { } s) await s.ExecuteAsync("insert.datetime", new InsertTextParams(DateTime.Now.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture)));
                     break;
                 default:
                     if (key.StartsWith("ctrl+alt+", StringComparison.Ordinal) && int.TryParse(key.AsSpan(9), out var n))

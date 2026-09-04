@@ -1,4 +1,5 @@
 using MarkPad.App.Services;
+using MarkPad.Core.Assets;
 using MarkPad.Core.Documents;
 using MarkPad.Core.Mru;
 using MarkPad.Core.Settings;
@@ -33,6 +34,7 @@ public partial class App : Application
         Directory.CreateDirectory(LocalDataDir);
         Services.GetRequiredService<SettingsStore>().Load();
         Services.GetRequiredService<RecentFilesStore>().Load();
+        Services.GetRequiredService<AssetService>().CleanupStale(TimeSpan.FromDays(7));
 
         // Warm up the shared WebView2 environment while the shell is being built (ARCHITECTURE §7.3).
         _ = WebViewEnvironment.GetAsync();
@@ -65,6 +67,9 @@ public partial class App : Application
         services.AddSingleton(new RecentFilesStore(Path.Combine(LocalDataDir, "recent.json")));
         services.AddSingleton<ThemeService>();
         services.AddSingleton<JumpListService>();
+        services.AddSingleton(sp => new AssetService(
+            Path.Combine(LocalDataDir, "pending-assets"),
+            () => sp.GetRequiredService<SettingsStore>().Current.Images.FolderName));
         return services.BuildServiceProvider();
     }
 

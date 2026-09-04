@@ -96,8 +96,29 @@ export interface InsertImageParams {
 export interface InsertTextParams {
   text: string
 }
+export interface InsertMathParams {
+  display: boolean
+}
 export interface SetReadonlyParams {
   value: boolean
+}
+export interface FindParams {
+  query: string
+  caseSensitive?: boolean
+  wholeWord?: boolean
+}
+export interface FindReplaceParams {
+  replacement: string
+}
+export interface FindResult {
+  count: number
+  index: number
+}
+export interface RewriteAssetPathsParams {
+  map: Record<string, string>
+}
+export interface RewriteAssetPathsResult {
+  count: number
 }
 
 // ---- web → host events ----
@@ -123,6 +144,8 @@ export interface SelectionContext {
   inCode: boolean
   codeLang: string | null
   link: string | null
+  /** Non-empty text selection (the link flyout hides its text box when true). */
+  hasSelection: boolean
 }
 export interface OutlineItem {
   level: number

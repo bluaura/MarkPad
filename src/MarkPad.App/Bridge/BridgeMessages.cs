@@ -56,7 +56,13 @@ public sealed record InsertTableParams(int Rows, int Cols);
 public sealed record InsertLinkParams(string Href, string? Text);
 public sealed record InsertImageParams(string Src, string? Alt);
 public sealed record InsertTextParams(string Text);
+public sealed record InsertMathParams(bool Display);
 public sealed record SetReadonlyParams(bool Value);
+public sealed record FindParams(string Query, bool CaseSensitive, bool WholeWord);
+public sealed record FindReplaceParams(string Replacement);
+public sealed record FindResult(int Count, int Index);
+public sealed record RewriteAssetPathsParams(Dictionary<string, string> Map);
+public sealed record RewriteAssetPathsResult(int Count);
 
 // ---- web → host ----
 public sealed record ReadyEvent(string Version);
@@ -73,7 +79,8 @@ public sealed record SelectionContext(
     bool InTable,
     bool InCode,
     string? CodeLang,
-    string? Link)
+    string? Link,
+    bool HasSelection = false)
 {
     public static SelectionContext Empty { get; } = new(false, false, false, false, false, 0, null, false, false, false, null, null);
 }
@@ -109,6 +116,13 @@ public sealed record ImageResolveResult(string Url);
 [JsonSerializable(typeof(InsertImageParams))]
 [JsonSerializable(typeof(InsertTextParams))]
 [JsonSerializable(typeof(SetReadonlyParams))]
+[JsonSerializable(typeof(InsertMathParams))]
+[JsonSerializable(typeof(FindParams))]
+[JsonSerializable(typeof(FindReplaceParams))]
+[JsonSerializable(typeof(FindResult))]
+[JsonSerializable(typeof(RewriteAssetPathsParams))]
+[JsonSerializable(typeof(RewriteAssetPathsResult))]
+[JsonSerializable(typeof(Dictionary<string, string>))]
 [JsonSerializable(typeof(ReadyEvent))]
 [JsonSerializable(typeof(ChangedEvent))]
 [JsonSerializable(typeof(SelectionContext))]

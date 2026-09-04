@@ -15,6 +15,8 @@ const APP_SHORTCUTS = new Set([
   'ctrl+shift+tab',
   'ctrl+f',
   'ctrl+h',
+  'ctrl+k', // link flyout (native UI)
+  'ctrl+shift+i', // image picker (native UI)
   'ctrl+p',
   'ctrl+,',
   'ctrl+shift+e',

@@ -15,6 +15,8 @@ public sealed class WebEditorSurface : IEditorSurface
         _host.SelectionChanged += (_, e) => SelectionChanged?.Invoke(this, e);
         _host.ShortcutRequested += (_, e) => ShortcutRequested?.Invoke(this, e);
         _host.TextFileDropped += (_, e) => TextFileDropped?.Invoke(this, e);
+        _host.FindResultChanged += (_, e) => FindResultChanged?.Invoke(this, e);
+        _host.LinkOpenRequested += (_, e) => LinkOpenRequested?.Invoke(this, e);
     }
 
     public EditorHost Host => _host;
@@ -27,6 +29,8 @@ public sealed class WebEditorSurface : IEditorSurface
     public event EventHandler<SelectionContext>? SelectionChanged;
     public event EventHandler<ShortcutEvent>? ShortcutRequested;
     public event EventHandler<DroppedTextFile>? TextFileDropped;
+    public event EventHandler<FindResult>? FindResultChanged;
+    public event EventHandler<string>? LinkOpenRequested;
 
     public Task InitializeAsync() => _host.InitializeAsync();
 
@@ -38,7 +42,16 @@ public sealed class WebEditorSurface : IEditorSurface
 
     public Task MarkSavedAsync() => _host.ExecuteAsync("doc.markSaved");
 
+    public Task SetDocumentPathAsync(string? path, string displayRoot)
+    {
+        _host.MapDocumentFolder(displayRoot);
+        return Task.CompletedTask;
+    }
+
     public Task ExecuteAsync(string method, object? parameters = null) => _host.ExecuteAsync(method, parameters);
+
+    public async Task<FindResult> FindAsync(string method, object? parameters = null)
+        => await _host.Bridge.CallAsync<FindResult>(method, parameters) ?? new FindResult(0, -1);
 
     public Task SetReadOnlyAsync(bool readOnly) => _host.ExecuteAsync("doc.setReadonly", new SetReadonlyParams(readOnly));
 

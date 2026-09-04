@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MarkPad.App.Bridge;
 using MarkPad.App.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,7 +38,15 @@ public sealed partial class EditorHost : UserControl, IAsyncDisposable
     public event EventHandler<SelectionContext>? SelectionChanged;
     public event EventHandler<ShortcutEvent>? ShortcutRequested;
     public event EventHandler<Editing.DroppedTextFile>? TextFileDropped;
+    public event EventHandler<FindResult>? FindResultChanged;
+    /// <summary>Ctrl+click on a link; the href as written in the document.</summary>
+    public event EventHandler<string>? LinkOpenRequested;
     public event EventHandler? RendererCrashed;
+
+    /// <summary>Set by the document view model: stores pasted/dropped image bytes and returns the relative link (F-IMG-01).</summary>
+    public Func<AssetSaveParams, Task<AssetSaveResult>>? AssetSaveHandler { get; set; }
+
+    private readonly HashSet<char> _mappedDrives = [];
 
     /// <summary>Creates the CoreWebView2 (shared environment), applies security settings and navigates to the bundle.</summary>
     public async Task InitializeAsync()
@@ -134,23 +143,59 @@ public sealed partial class EditorHost : UserControl, IAsyncDisposable
 
     private void RegisterHostHandlers(EditorBridge bridge)
     {
-        bridge.RegisterHandler("link.open", async (p, _) =>
+        // PRD F-VIEW-04: the shell decides (browser / new tab / shell execute) based on the document's folder.
+        bridge.RegisterHandler("link.open", (p, _) =>
         {
             var href = p?.TryGetProperty("href", out var h) == true ? h.GetString() : null;
-            if (Uri.TryCreate(href, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https" or "mailto")
-            {
-                await Launcher.LaunchUriAsync(uri);
-                return new LinkOpenResult(true);
-            }
-            return new LinkOpenResult(false); // relative .md links open in a new tab from T-25 on
+            if (string.IsNullOrWhiteSpace(href)) return Task.FromResult<object?>(new LinkOpenResult(false));
+            LinkOpenRequested?.Invoke(this, href);
+            return Task.FromResult<object?>(new LinkOpenResult(true));
         });
 
+        // PRD F-VIEW-03 / ADR-05: absolute local paths are served through a per-drive virtual host, mapped lazily.
         bridge.RegisterHandler("image.resolve", (p, _) =>
         {
-            // Drive-letter mapping arrives with T-24; until then absolute paths are passed through.
             var src = p?.TryGetProperty("src", out var s) == true ? s.GetString() ?? "" : "";
-            return Task.FromResult<object?>(new ImageResolveResult(src));
+            return Task.FromResult<object?>(new ImageResolveResult(ResolveLocalImage(src) ?? src));
         });
+
+        bridge.RegisterHandler("asset.save", async (p, _) =>
+        {
+            if (p is null) throw new BridgeException("BAD_PARAM", "asset.save requires parameters");
+            var handler = AssetSaveHandler ?? throw new BridgeException("NO_HANDLER", "no document attached");
+            var request = p.Value.Deserialize(BridgeJsonContext.Default.AssetSaveParams)
+                ?? throw new BridgeException("BAD_PARAM", "malformed asset.save");
+            return await handler(request);
+        });
+    }
+
+    /// <summary>`C:\x\a.png` or `file:///C:/x/a.png` → `https://drive-c.markpad/x/a.png`.</summary>
+    private string? ResolveLocalImage(string src)
+    {
+        string local;
+        if (Uri.TryCreate(src, UriKind.Absolute, out var uri) && uri.IsFile)
+        {
+            local = uri.LocalPath;
+        }
+        else if (src.Length >= 3 && char.IsAsciiLetter(src[0]) && src[1] == ':' && (src[2] == '\\' || src[2] == '/'))
+        {
+            local = src;
+        }
+        else
+        {
+            return null;
+        }
+
+        var drive = char.ToLowerInvariant(local[0]);
+        var core = Web.CoreWebView2;
+        if (core is null) return null;
+        if (_mappedDrives.Add(drive))
+        {
+            core.SetVirtualHostNameToFolderMapping($"drive-{drive}.markpad", $"{char.ToUpperInvariant(drive)}:\\", CoreWebView2HostResourceAccessKind.Allow);
+        }
+        var rest = local.Length > 3 ? local[3..].Replace('\\', '/') : string.Empty;
+        var escaped = string.Join('/', rest.Split('/').Select(Uri.EscapeDataString));
+        return $"https://drive-{drive}.markpad/{escaped}";
     }
 
     private void OnBridgeEvent(object? sender, BridgeEventArgs e)
@@ -165,6 +210,9 @@ public sealed partial class EditorHost : UserControl, IAsyncDisposable
                 break;
             case "shortcut":
                 if (e.PayloadAs<ShortcutEvent>() is { } sc) ShortcutRequested?.Invoke(this, sc);
+                break;
+            case "find.result":
+                if (e.PayloadAs<FindResult>() is { } fr) FindResultChanged?.Invoke(this, fr);
                 break;
             case "files.dropped":
                 if (e.Payload is { } p && p.TryGetProperty("files", out var files))
