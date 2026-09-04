@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Builds the sideload MSIX (T-44): editor bundle → Release build with -p:Packaged=true → sign with build\MarkPad-dev.pfx.
   Output: out\MarkPad_<version>_x64.msix (+ the .cer to install on target PCs).

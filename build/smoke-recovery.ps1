@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Crash-recovery smoke (PRD §5.5): type into a document, wait for a snapshot, kill the process,
   then verify a recovery snapshot exists. Restarting the app should offer to restore it.

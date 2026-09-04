@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   T-11 / T-43 performance measurement on the Release build: cold start → editor ready, doc.load for 100KB and
   1MB fixtures, and memory of MarkPad + its WebView2 process tree. Prints a markdown table.

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   MarkPad 통합 검증. 사람과 에이전트가 같은 명령을 쓴다.
 .PARAMETER Quick
