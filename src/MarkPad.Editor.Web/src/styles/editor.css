@@ -1,0 +1,184 @@
+/* MarkPad editor theme. Light tokens on :root, dark overrides under [data-theme="dark"].
+   Crepe's own variables (--crepe-*) are mapped onto ours so the built-in components follow. */
+
+:root {
+  --mp-font-family: 'Segoe UI Variable Text', 'Segoe UI', 'Malgun Gothic', sans-serif;
+  --mp-font-mono: 'Cascadia Code', 'Cascadia Mono', Consolas, 'Courier New', monospace;
+  --mp-font-size: 15px;
+  --mp-line-height: 1.7;
+  --mp-max-width: 800px;
+  --mp-zoom: 1;
+  --mp-accent: #0067c0;
+
+  --mp-bg: #ffffff;
+  --mp-fg: #1b1b1b;
+  --mp-fg-muted: #5c5c5c;
+  --mp-surface: #f6f6f6;
+  --mp-surface-low: #ececec;
+  --mp-border: #d6d6d6;
+  --mp-hover: #e8e8e8;
+  --mp-selected: #d9e7f6;
+  --mp-code-inline: #b3261e;
+  --mp-link: #0067c0;
+}
+
+:root[data-theme='dark'] {
+  --mp-bg: #1f1f1f;
+  --mp-fg: #e6e6e6;
+  --mp-fg-muted: #a5a5a5;
+  --mp-surface: #262626;
+  --mp-surface-low: #2e2e2e;
+  --mp-border: #3d3d3d;
+  --mp-hover: #333333;
+  --mp-selected: #2a3f5a;
+  --mp-code-inline: #ff8a80;
+  --mp-link: #4cc2ff;
+  --mp-accent: #4cc2ff;
+  color-scheme: dark;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--mp-bg);
+  color: var(--mp-fg);
+  font-family: var(--mp-font-family);
+  height: 100%;
+}
+
+body {
+  overflow-y: auto;
+}
+
+.markpad-editor {
+  min-height: 100%;
+  zoom: var(--mp-zoom);
+}
+
+/* ---- Crepe variable mapping ---- */
+.milkdown {
+  --crepe-color-background: var(--mp-bg);
+  --crepe-color-on-background: var(--mp-fg);
+  --crepe-color-surface: var(--mp-surface);
+  --crepe-color-surface-low: var(--mp-surface-low);
+  --crepe-color-on-surface: var(--mp-fg);
+  --crepe-color-on-surface-variant: var(--mp-fg-muted);
+  --crepe-color-outline: var(--mp-border);
+  --crepe-color-primary: var(--mp-accent);
+  --crepe-color-secondary: var(--mp-surface-low);
+  --crepe-color-on-secondary: var(--mp-fg);
+  --crepe-color-inverse: var(--mp-fg);
+  --crepe-color-on-inverse: var(--mp-bg);
+  --crepe-color-inline-code: var(--mp-code-inline);
+  --crepe-color-error: #ba1a1a;
+  --crepe-color-hover: var(--mp-hover);
+  --crepe-color-selected: var(--mp-selected);
+  --crepe-color-inline-area: var(--mp-surface-low);
+
+  --crepe-base-font-size: var(--mp-font-size);
+  --crepe-font-title: var(--mp-font-family);
+  --crepe-font-default: var(--mp-font-family);
+  --crepe-font-code: var(--mp-font-mono);
+
+  --crepe-shadow-1: 0 1px 3px 1px rgba(0, 0, 0, 0.12), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --crepe-shadow-2: 0 2px 6px 2px rgba(0, 0, 0, 0.12), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+
+  background: var(--mp-bg);
+  color: var(--mp-fg);
+  font-family: var(--mp-font-family);
+  font-size: var(--mp-font-size);
+  line-height: var(--mp-line-height);
+}
+
+/* ---- Document typography (PRD 4.1: max width 800, centered) ---- */
+.milkdown .ProseMirror {
+  max-width: var(--mp-max-width);
+  margin: 0 auto;
+  padding: 32px 40px 50vh;
+  outline: none;
+  caret-color: var(--mp-accent);
+  overflow-wrap: anywhere;
+}
+
+.milkdown .ProseMirror h1,
+.milkdown .ProseMirror h2,
+.milkdown .ProseMirror h3,
+.milkdown .ProseMirror h4,
+.milkdown .ProseMirror h5,
+.milkdown .ProseMirror h6 {
+  font-family: var(--mp-font-family);
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 1.4em 0 0.5em;
+  color: var(--mp-fg);
+}
+.milkdown .ProseMirror h1 { font-size: 2em; border-bottom: 1px solid var(--mp-border); padding-bottom: 0.25em; }
+.milkdown .ProseMirror h2 { font-size: 1.5em; border-bottom: 1px solid var(--mp-border); padding-bottom: 0.2em; }
+.milkdown .ProseMirror h3 { font-size: 1.25em; }
+.milkdown .ProseMirror h4 { font-size: 1.1em; }
+.milkdown .ProseMirror h5 { font-size: 1em; }
+.milkdown .ProseMirror h6 { font-size: 0.95em; color: var(--mp-fg-muted); }
+
+.milkdown .ProseMirror p {
+  margin: 0 0 1em;
+}
+
+.milkdown .ProseMirror a {
+  color: var(--mp-link);
+}
+
+.milkdown .ProseMirror blockquote {
+  margin: 0 0 1em;
+  padding: 0.2em 1em;
+  border-left: 4px solid var(--mp-border);
+  color: var(--mp-fg-muted);
+}
+
+.milkdown .ProseMirror code {
+  font-family: var(--mp-font-mono);
+  font-size: 0.9em;
+}
+
+.milkdown .ProseMirror hr {
+  border: 0;
+  border-top: 2px solid var(--mp-border);
+  margin: 1.5em 0;
+}
+
+.milkdown .ProseMirror table {
+  border-collapse: collapse;
+  margin: 0 0 1em;
+}
+.milkdown .ProseMirror th,
+.milkdown .ProseMirror td {
+  border: 1px solid var(--mp-border);
+  padding: 6px 12px;
+}
+.milkdown .ProseMirror th {
+  background: var(--mp-surface);
+  font-weight: 600;
+}
+
+.milkdown .ProseMirror img {
+  max-width: 100%;
+}
+
+.milkdown .ProseMirror ::selection {
+  background: var(--mp-selected);
+}
+
+/* Dev-mode banner when running outside WebView2 */
+.markpad-devbar {
+  position: fixed;
+  right: 8px;
+  bottom: 8px;
+  font: 12px var(--mp-font-family);
+  color: var(--mp-fg-muted);
+  background: var(--mp-surface);
+  border: 1px solid var(--mp-border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  opacity: 0.8;
+  pointer-events: none;
+}

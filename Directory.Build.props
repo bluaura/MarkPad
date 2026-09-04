@@ -1,0 +1,19 @@
+<Project>
+  <!-- Shared settings for every project (ARCHITECTURE.md §1, IMPLEMENTATION-PLAN §5.1). -->
+  <PropertyGroup>
+    <!-- "preview" (C# 14+) is required by CommunityToolkit.Mvvm 8.4 for [ObservableProperty] on partial properties. -->
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>5</WarningLevel>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <Deterministic>true</Deterministic>
+    <SatelliteResourceLanguages>ko;en</SatelliteResourceLanguages>
+    <Authors>MarkPad</Authors>
+    <Product>MarkPad</Product>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+</Project>

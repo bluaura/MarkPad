@@ -1,0 +1,64 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>MarkPad.App</RootNamespace>
+    <AssemblyName>MarkPad</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <UseWinUI>true</UseWinUI>
+    <Platforms>x64</Platforms>
+    <Platform Condition="'$(Platform)' == '' or '$(Platform)' == 'AnyCPU'">x64</Platform>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <EnableDefaultPageItems>true</EnableDefaultPageItems>
+    <SatelliteResourceLanguages>ko;en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <!-- Development (default): unpackaged, Windows App SDK self-contained → run/debug the exe directly. -->
+  <PropertyGroup Condition="'$(Packaged)' != 'true'">
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+  </PropertyGroup>
+
+  <!-- Distribution (-p:Packaged=true): MSIX, framework-dependent (T-44). -->
+  <PropertyGroup Condition="'$(Packaged)' == 'true'">
+    <WindowsPackageType>MSIX</WindowsPackageType>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+    <SelfContained>false</SelfContained>
+    <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
+    <GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
+    <AppxBundle>Never</AppxBundle>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" />
+    <!-- AI/ML native payloads (~40MB) are not needed by an editor; keep the reference for the meta package, drop assets. -->
+    <PackageReference Include="Microsoft.WindowsAppSDK.AI" ExcludeAssets="runtime;native;build" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.ML" ExcludeAssets="runtime;native;build" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Serilog" />
+    <PackageReference Include="Serilog.Extensions.Logging" />
+    <PackageReference Include="Serilog.Sinks.File" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MarkPad.Core\MarkPad.Core.csproj" />
+  </ItemGroup>
+
+  <!-- ARCHITECTURE.md §8.2: build the Vite bundle into Assets/editor before compiling the app. -->
+  <PropertyGroup>
+    <EditorWebDir>$(MSBuildProjectDirectory)\..\MarkPad.Editor.Web</EditorWebDir>
+  </PropertyGroup>
+  <Target Name="BuildEditorWeb" BeforeTargets="PrepareForBuild" Condition="'$(SkipEditorWeb)' != 'true'">
+    <Exec Command="npm ci --no-audit --no-fund" WorkingDirectory="$(EditorWebDir)" Condition="!Exists('$(EditorWebDir)\node_modules')" />
+    <Exec Command="npm run build" WorkingDirectory="$(EditorWebDir)" />
+  </Target>
+  <ItemGroup>
+    <Content Include="Assets\editor\**" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\icons\**" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Package.appxmanifest" Condition="'$(Packaged)' == 'true'" />
+  </ItemGroup>
+</Project>

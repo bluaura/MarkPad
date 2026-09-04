@@ -1,0 +1,52 @@
+<Window
+    x:Class="MarkPad.App.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:MarkPad.App.Controls"
+    xmlns:views="using:MarkPad.App.Views"
+    Title="MarkPad">
+
+    <Grid x:Name="Root" Loaded="OnRootLoaded" ActualThemeChanged="OnActualThemeChanged">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- App shortcuts while focus is outside the WebView (ARCHITECTURE ADR-06). Inside it, the JS host keymap delegates. -->
+        <Grid.KeyboardAccelerators>
+            <KeyboardAccelerator Key="N" Modifiers="Control" Invoked="OnAccelNew" />
+            <KeyboardAccelerator Key="O" Modifiers="Control" Invoked="OnAccelOpen" />
+            <KeyboardAccelerator Key="S" Modifiers="Control" Invoked="OnAccelSave" />
+            <KeyboardAccelerator Key="S" Modifiers="Control,Shift" Invoked="OnAccelSaveAs" />
+        </Grid.KeyboardAccelerators>
+
+        <Grid Grid.Row="0" Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" Padding="8,4,0,4">
+                <Button Height="32" Padding="8,0" Margin="1,0" Background="Transparent" BorderThickness="0" Click="OnNewClick" ToolTipService.ToolTip="새 문서 (Ctrl+N)" AutomationProperties.Name="새 문서">
+                    <FontIcon Glyph="&#xE8A5;" FontSize="16" />
+                </Button>
+                <Button Height="32" Padding="8,0" Margin="1,0" Background="Transparent" BorderThickness="0" Click="OnOpenClick" ToolTipService.ToolTip="열기 (Ctrl+O)" AutomationProperties.Name="열기">
+                    <FontIcon Glyph="&#xE8E5;" FontSize="16" />
+                </Button>
+                <Button Height="32" Padding="8,0" Margin="1,0" Background="Transparent" BorderThickness="0" Click="OnSaveClick" ToolTipService.ToolTip="저장 (Ctrl+S)" AutomationProperties.Name="저장">
+                    <FontIcon Glyph="&#xE74E;" FontSize="16" />
+                </Button>
+                <Border Width="1" Height="20" Margin="6,0" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+            </StackPanel>
+            <controls:FormatToolbar x:Name="Toolbar" Grid.Column="1" />
+        </Grid>
+
+        <views:EditorHost x:Name="Editor" Grid.Row="1" />
+
+        <Grid Grid.Row="2" Padding="12,3" Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
+            <TextBlock x:Name="StatusText" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="" />
+            <TextBlock x:Name="SaveStateText" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Right" Text="" />
+        </Grid>
+    </Grid>
+</Window>

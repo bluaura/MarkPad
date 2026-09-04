@@ -1,0 +1,99 @@
+<UserControl
+    x:Class="MarkPad.App.Controls.FormatToolbar"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}">
+    <UserControl.Resources>
+        <Style x:Key="TbToggle" TargetType="ToggleButton">
+            <Setter Property="MinWidth" Value="36" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="Margin" Value="1,0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style x:Key="TbButton" TargetType="Button">
+            <Setter Property="MinWidth" Value="36" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="Margin" Value="1,0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style x:Key="TbSep" TargetType="Border">
+            <Setter Property="Width" Value="1" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="Margin" Value="6,0" />
+            <Setter Property="Background" Value="{ThemeResource DividerStrokeColorDefaultBrush}" />
+        </Style>
+    </UserControl.Resources>
+
+    <StackPanel Orientation="Horizontal" Padding="8,4">
+        <!-- 문단 -->
+        <DropDownButton Height="32" Padding="8,0" Margin="1,0" Background="Transparent" BorderThickness="0"
+                        Content="{x:Bind ViewModel.HeadingLabel, Mode=OneWay}"
+                        AutomationProperties.Name="제목 수준" ToolTipService.ToolTip="제목 수준 (Ctrl+1~6, 본문 Ctrl+Shift+0)">
+            <DropDownButton.Flyout>
+                <MenuFlyout>
+                    <MenuFlyoutItem Text="본문" Command="{x:Bind ViewModel.SetHeadingCommand}" CommandParameter="0" />
+                    <MenuFlyoutItem Text="제목 1" Command="{x:Bind ViewModel.SetHeadingCommand}" CommandParameter="1" />
+                    <MenuFlyoutItem Text="제목 2" Command="{x:Bind ViewModel.SetHeadingCommand}" CommandParameter="2" />
+                    <MenuFlyoutItem Text="제목 3" Command="{x:Bind ViewModel.SetHeadingCommand}" CommandParameter="3" />
+                    <MenuFlyoutItem Text="제목 4" Command="{x:Bind ViewModel.SetHeadingCommand}" CommandParameter="4" />
+                    <MenuFlyoutItem Text="제목 5" Command="{x:Bind ViewModel.SetHeadingCommand}" CommandParameter="5" />
+                    <MenuFlyoutItem Text="제목 6" Command="{x:Bind ViewModel.SetHeadingCommand}" CommandParameter="6" />
+                </MenuFlyout>
+            </DropDownButton.Flyout>
+        </DropDownButton>
+        <Border Style="{StaticResource TbSep}" />
+
+        <!-- 인라인 -->
+        <ToggleButton Style="{StaticResource TbToggle}" IsChecked="{x:Bind ViewModel.IsBold, Mode=OneWay}"
+                      Command="{x:Bind ViewModel.ToggleBoldCommand}" AutomationProperties.Name="굵게" ToolTipService.ToolTip="굵게 (Ctrl+B)">
+            <FontIcon Glyph="&#xE8DD;" FontSize="16" />
+        </ToggleButton>
+        <ToggleButton Style="{StaticResource TbToggle}" IsChecked="{x:Bind ViewModel.IsItalic, Mode=OneWay}"
+                      Command="{x:Bind ViewModel.ToggleItalicCommand}" AutomationProperties.Name="기울임" ToolTipService.ToolTip="기울임 (Ctrl+I)">
+            <FontIcon Glyph="&#xE8DB;" FontSize="16" />
+        </ToggleButton>
+        <ToggleButton Style="{StaticResource TbToggle}" IsChecked="{x:Bind ViewModel.IsStrike, Mode=OneWay}"
+                      Command="{x:Bind ViewModel.ToggleStrikeCommand}" AutomationProperties.Name="취소선" ToolTipService.ToolTip="취소선 (Ctrl+Shift+X)">
+            <FontIcon Glyph="&#xEDE0;" FontSize="16" />
+        </ToggleButton>
+        <ToggleButton Style="{StaticResource TbToggle}" IsChecked="{x:Bind ViewModel.IsCode, Mode=OneWay}"
+                      Command="{x:Bind ViewModel.ToggleCodeCommand}" AutomationProperties.Name="인라인 코드" ToolTipService.ToolTip="인라인 코드 (Ctrl+E)">
+            <TextBlock Text="&lt;/&gt;" FontFamily="Consolas" FontSize="13" />
+        </ToggleButton>
+        <Border Style="{StaticResource TbSep}" />
+
+        <!-- 목록 -->
+        <ToggleButton Style="{StaticResource TbToggle}" IsChecked="{x:Bind ViewModel.IsBulletList, Mode=OneWay}"
+                      Command="{x:Bind ViewModel.ToggleBulletListCommand}" AutomationProperties.Name="글머리 목록" ToolTipService.ToolTip="글머리 목록 (Ctrl+Shift+8)">
+            <FontIcon Glyph="&#xE8FD;" FontSize="16" />
+        </ToggleButton>
+        <ToggleButton Style="{StaticResource TbToggle}" IsChecked="{x:Bind ViewModel.IsOrderedList, Mode=OneWay}"
+                      Command="{x:Bind ViewModel.ToggleOrderedListCommand}" AutomationProperties.Name="번호 목록" ToolTipService.ToolTip="번호 목록 (Ctrl+Shift+7)">
+            <TextBlock Text="1." FontWeight="SemiBold" FontSize="13" />
+        </ToggleButton>
+        <ToggleButton Style="{StaticResource TbToggle}" IsChecked="{x:Bind ViewModel.IsTaskList, Mode=OneWay}"
+                      Command="{x:Bind ViewModel.ToggleTaskListCommand}" AutomationProperties.Name="체크리스트" ToolTipService.ToolTip="체크리스트 (Ctrl+Shift+9)">
+            <FontIcon Glyph="&#xE73A;" FontSize="16" />
+        </ToggleButton>
+        <Border Style="{StaticResource TbSep}" />
+
+        <!-- 블록 -->
+        <ToggleButton Style="{StaticResource TbToggle}" IsChecked="{x:Bind ViewModel.IsBlockquote, Mode=OneWay}"
+                      Command="{x:Bind ViewModel.ToggleBlockquoteCommand}" AutomationProperties.Name="인용" ToolTipService.ToolTip="인용 (Ctrl+Shift+Q)">
+            <TextBlock Text="❝" FontSize="16" FontWeight="SemiBold" />
+        </ToggleButton>
+        <Button Style="{StaticResource TbButton}" Command="{x:Bind ViewModel.InsertCodeBlockCommand}" AutomationProperties.Name="코드블록" ToolTipService.ToolTip="코드블록 (Ctrl+Shift+C)">
+            <FontIcon Glyph="&#xE943;" FontSize="16" />
+        </Button>
+        <Button Style="{StaticResource TbButton}" Command="{x:Bind ViewModel.InsertTableCommand}" AutomationProperties.Name="표" ToolTipService.ToolTip="표 3×3 (Ctrl+T)">
+            <FontIcon Glyph="&#xE80A;" FontSize="16" />
+        </Button>
+        <Button Style="{StaticResource TbButton}" Command="{x:Bind ViewModel.InsertHrCommand}" AutomationProperties.Name="수평선" ToolTipService.ToolTip="수평선 (Ctrl+Shift+-)">
+            <FontIcon Glyph="&#xE738;" FontSize="16" />
+        </Button>
+    </StackPanel>
+</UserControl>
