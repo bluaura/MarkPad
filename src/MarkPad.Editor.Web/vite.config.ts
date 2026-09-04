@@ -37,5 +37,6 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: ['test/**/*.spec.ts'],
+    css: true, // export.css?inline must resolve to real text in tests
   },
 })

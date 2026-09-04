@@ -111,6 +111,8 @@
 | T-43 | 성능 최적화 | T-11 미달 항목 해결: WebView2 워밍업, 번들 코드 분할(Mermaid 동적), `changed` 페이로드 최소화, 1MB 경고 | PRD §5.4 전 항목 달성, `docs/perf/m1.md` 기록 | T-11, T-32 | M | G1/G2/G5 |
 | T-44 | MSIX 패키징·설치 | `Package.appxmanifest`(파일 연결 `.md/.markdown`, 아이콘, 점프리스트), `build/make-cert.ps1`, `build/pack.ps1`, README 설치 절차 | 다른 PC에 사이드로드 설치 → 더블클릭으로 md 열림 | T-16, T-18 | M | F-FILE-10(부분) |
 
+**E3/E5/E6 진행 상황 (2026-09-04)**: T-34(목록·인용 자식 정렬 + 마커 통일, 코퍼스 103/103 유지, vitest 5건), T-35/36(저장 규칙·직렬화 스타일은 설정 주입으로 완료, `roundtrip-v1.spec` T-36 케이스), T-40(HTML 단일 파일: Lezer 하이라이트·KaTeX·Mermaid SVG·base64 이미지, `export.spec` 3건, `HtmlExportBuilder` xUnit), T-41(`PdfExportService`→`ExportService.ExportPdfAsync`: `PrintToPdfAsync` A4/Letter·여백, print.css), T-56 인쇄(`ShowPrintUI`), T-47 Mermaid 미리보기(코드블록 `renderPreview`), T-42(`RecoveryStore` 5초 스냅샷, 시작 시 복구 대화상자, `ProcessFailed`→표면 재생성, 전역 예외 시 동기 플러시 — `build/smoke-recovery.ps1` PASS, 재시작 복구 스크린샷 확인), T-43 부분(1MB 경고), T-44(`Package.appxmanifest` .md/.markdown 연결·아이콘, `build/make-icons.ps1`·`make-cert.ps1`·`pack.ps1`). **미확인**: 내보내기 대화상자·PDF 실제 출력(대화상자 자동화 불가 → 수동), 설치 후 더블클릭 연결(사이드로드는 사용자 PC에서 인증서 설치 필요).
+
 **M1 종료 조건**: §6.2 체크리스트 통과 + PRD G1~G5 실측 달성 + 본인 2주 사용 시작.
 
 ---

@@ -114,6 +114,25 @@ export interface FindResult {
   count: number
   index: number
 }
+export interface ExportRenderHtmlParams {
+  inlineImages: boolean
+  theme: ThemeMode
+}
+export interface ExportRenderHtmlResult {
+  html: string
+  css: string
+  hasMath: boolean
+}
+export interface ExportPreparePrintParams {
+  theme?: ThemeMode
+  pageSize?: string
+}
+export interface AssetReadParams {
+  src: string
+}
+export interface AssetReadResult {
+  dataUrl: string | null
+}
 export interface RewriteAssetPathsParams {
   map: Record<string, string>
 }

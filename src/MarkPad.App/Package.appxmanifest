@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+  xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap3 uap5 rescap">
+
+  <Identity Name="MarkPad" Publisher="CN=MarkPad Dev" Version="0.1.0.0" />
+
+  <Properties>
+    <DisplayName>MarkPad</DisplayName>
+    <PublisherDisplayName>MarkPad</PublisherDisplayName>
+    <Logo>Assets\icons\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="ko-KR" />
+    <Resource Language="en-US" />
+  </Resources>
+
+  <Applications>
+    <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="$targetentrypoint$">
+      <uap:VisualElements
+        DisplayName="MarkPad"
+        Description="Windows용 WYSIWYG Markdown 뷰어·에디터"
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\icons\Square150x150Logo.png"
+        Square44x44Logo="Assets\icons\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Assets\icons\Wide310x150Logo.png" />
+        <uap:SplashScreen Image="Assets\icons\SplashScreen.png" />
+      </uap:VisualElements>
+      <Extensions>
+        <!-- PRD F-FILE-10: .md / .markdown only. .txt is deliberately NOT registered (Notepad stays default). -->
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap:FileTypeAssociation Name="markdown">
+            <uap:DisplayName>Markdown 문서</uap:DisplayName>
+            <uap:Logo>Assets\icons\FileIcon.png</uap:Logo>
+            <uap:SupportedFileTypes>
+              <uap:FileType>.md</uap:FileType>
+              <uap:FileType>.markdown</uap:FileType>
+            </uap:SupportedFileTypes>
+          </uap:FileTypeAssociation>
+        </uap:Extension>
+        <!-- "연결 프로그램" 목록에는 노출되되 기본 앱은 아님 -->
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap:FileTypeAssociation Name="plaintext">
+            <uap:DisplayName>텍스트 문서</uap:DisplayName>
+            <uap:SupportedFileTypes>
+              <uap:FileType>.txt</uap:FileType>
+            </uap:SupportedFileTypes>
+          </uap:FileTypeAssociation>
+        </uap:Extension>
+        <uap5:Extension Category="windows.appExecutionAlias">
+          <uap5:AppExecutionAlias>
+            <uap5:ExecutionAlias Alias="markpad.exe" />
+          </uap5:AppExecutionAlias>
+        </uap5:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>

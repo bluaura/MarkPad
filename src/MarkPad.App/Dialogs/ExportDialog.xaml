@@ -1,0 +1,26 @@
+<ContentDialog
+    x:Class="MarkPad.App.Dialogs.ExportDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="내보내기"
+    PrimaryButtonText="내보내기"
+    CloseButtonText="취소"
+    DefaultButton="Primary">
+    <StackPanel Spacing="12" MinWidth="360">
+        <RadioButtons x:Name="FormatChoice" Header="형식" SelectedIndex="0">
+            <RadioButton Content="HTML (단일 파일)" />
+            <RadioButton Content="PDF" />
+        </RadioButtons>
+        <CheckBox x:Name="InlineImagesBox" Content="이미지를 파일에 포함 (base64)" IsChecked="True" />
+        <CheckBox x:Name="DarkThemeBox" Content="다크 테마로 내보내기" />
+        <ComboBox x:Name="PageSizeBox" Header="페이지 크기 (PDF)" SelectedIndex="0" MinWidth="160">
+            <ComboBoxItem Content="A4" />
+            <ComboBoxItem Content="Letter" />
+        </ComboBox>
+        <ComboBox x:Name="MarginBox" Header="여백 (PDF)" SelectedIndex="1" MinWidth="160">
+            <ComboBoxItem Content="좁게 (10mm)" Tag="10" />
+            <ComboBoxItem Content="보통 (20mm)" Tag="20" />
+            <ComboBoxItem Content="넓게 (30mm)" Tag="30" />
+        </ComboBox>
+    </StackPanel>
+</ContentDialog>

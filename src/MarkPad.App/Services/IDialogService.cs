@@ -31,6 +31,12 @@ public interface IDialogService
 
     Task<DiscardChoice> ConfirmDiscardAsync(string fileName);
 
+    /// <summary>Export options dialog (F-EXP-01/02); null when cancelled.</summary>
+    Task<ExportOptions?> ShowExportOptionsAsync(ExportFormat initialFormat);
+
+    /// <summary>Save picker for an export target (.html / .pdf).</summary>
+    Task<string?> PickExportPathAsync(string suggestedName, string extension, string? initialDirectory);
+
     Task<bool> ConfirmAsync(string title, string message, string primaryText);
 
     void ShowInfo(string message, bool isError = false);

@@ -9,6 +9,7 @@ using MarkPad.App.Services;
 using MarkPad.Core.Assets;
 using MarkPad.Core.Documents;
 using MarkPad.Core.Mru;
+using MarkPad.Core.Recovery;
 using MarkPad.Core.Settings;
 using Microsoft.Extensions.Logging;
 using Windows.System;
@@ -24,6 +25,8 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly JumpListService _jumpList;
     private readonly ThemeService _theme;
     private readonly AssetService _assets;
+    private readonly ExportService _export;
+    private readonly RecoveryStore _recovery;
     private readonly IDialogService _dialogs;
     private readonly ILogger<ShellViewModel> _log;
 
@@ -34,6 +37,8 @@ public sealed partial class ShellViewModel : ObservableObject
         JumpListService jumpList,
         ThemeService theme,
         AssetService assets,
+        ExportService export,
+        RecoveryStore recovery,
         IDialogService dialogs,
         ILogger<ShellViewModel> log)
     {
@@ -43,6 +48,8 @@ public sealed partial class ShellViewModel : ObservableObject
         _jumpList = jumpList;
         _theme = theme;
         _assets = assets;
+        _export = export;
+        _recovery = recovery;
         _dialogs = dialogs;
         _log = log;
         ShowToolbar = settings.Current.Ui.ShowToolbar;
@@ -99,15 +106,65 @@ public sealed partial class ShellViewModel : ObservableObject
 
     // ---------- tab creation ----------
 
-    private DocumentViewModel CreateTab(Document document, string? suggestedName = null)
+    private DocumentViewModel CreateTab(Document document, string? suggestedName = null, string? initialText = null)
     {
-        var vm = new DocumentViewModel(document, _io, _theme, _settings, _assets, suggestedName);
+        var vm = new DocumentViewModel(document, _io, _theme, _settings, _assets, _recovery, suggestedName, initialText);
         vm.ShortcutRequested += (_, e) => _ = HandleShortcutAsync(e.Key);
         vm.TextFileDropped += (_, e) => OpenDroppedText(e);
         vm.LinkOpenRequested += (s, href) => _ = OpenLinkAsync((DocumentViewModel)s!, href);
+        vm.Notification += (_, msg) => _dialogs.ShowInfo(msg);
         Tabs.Add(vm);
         SelectedTab = vm;
         return vm;
+    }
+
+    // ---------- crash recovery (PRD §5.5, T-42) ----------
+
+    /// <summary>Startup: offer snapshots left by a crashed session. Declined snapshots are discarded.</summary>
+    public async Task OfferRecoveryAsync()
+    {
+        var snapshots = _recovery.List().Where(s => !s.Id.StartsWith($"{Environment.ProcessId}-", StringComparison.Ordinal)).ToList();
+        if (snapshots.Count == 0) return;
+        var names = string.Join("\n", snapshots.Take(8).Select(s => $"• {s.Title}{(s.Path is null ? " (저장 안 됨)" : $" — {s.Path}")}"));
+        var restore = await _dialogs.ConfirmAsync(
+            "저장되지 않은 문서 복구",
+            $"이전 세션이 비정상 종료되어 저장되지 않은 문서 {snapshots.Count}개가 남아 있습니다.\n\n{names}\n\n복구할까요? (복구하지 않으면 스냅샷은 삭제됩니다)",
+            "복구");
+        foreach (var s in snapshots)
+        {
+            if (restore)
+            {
+                try
+                {
+                    var text = await _recovery.ReadTextAsync(s);
+                    Document doc;
+                    if (s.Path is not null && File.Exists(s.Path)) doc = await _io.OpenAsync(s.Path);
+                    else doc = DocumentIO.CreateNew(s.Kind);
+                    CreateTab(doc, doc.Path is null ? s.Title : null, initialText: text);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    _log.LogError(ex, "recovery failed for {Id}", s.Id);
+                    _dialogs.ShowInfo($"복구 실패: {s.Title} — {ex.Message}", isError: true);
+                }
+            }
+            _recovery.Delete(s.Id);
+        }
+    }
+
+    /// <summary>Unhandled exception: persist every dirty tab synchronously before the process dies.</summary>
+    public void FlushSnapshotsBlocking()
+    {
+        foreach (var t in Tabs) t.FlushSnapshotBlocking();
+    }
+
+    /// <summary>Normal exit after <see cref="RequestExitAsync"/>: drop snapshots and pending assets.</summary>
+    public async Task DisposeAllAsync()
+    {
+        foreach (var t in Tabs.ToList())
+        {
+            try { await t.DisposeAsync(); } catch (Exception ex) when (ex is BridgeException or InvalidOperationException) { }
+        }
     }
 
     [RelayCommand]
@@ -139,6 +196,11 @@ public sealed partial class ShellViewModel : ObservableObject
             }
             try
             {
+                var size = new FileInfo(full).Length;
+                if (size > 1_000_000)
+                {
+                    _dialogs.ShowInfo($"큰 문서입니다 ({size / 1024 / 1024.0:0.0} MB). 렌더링에 몇 초 걸릴 수 있습니다."); // PRD §5.4 / T-43
+                }
                 var doc = await _io.OpenAsync(full);
                 CreateTab(doc);
                 await _recent.AddAsync(full);
@@ -236,6 +298,56 @@ public sealed partial class ShellViewModel : ObservableObject
         {
             _log.LogError(ex, "image insert failed: {Path}", path);
             _dialogs.ShowInfo($"이미지 삽입 실패: {ex.Message}", isError: true);
+        }
+    }
+
+    // ---------- export / print (PRD F-EXP-01~03) ----------
+
+    [RelayCommand]
+    private Task ExportAsync() => ExportAsync(ExportFormat.Html);
+
+    public async Task ExportAsync(ExportFormat initialFormat)
+    {
+        var tab = SelectedTab;
+        if (tab?.Surface is not WebEditorSurface web)
+        {
+            _dialogs.ShowInfo("내보내기는 Markdown 탭에서만 가능합니다.");
+            return;
+        }
+        var options = await _dialogs.ShowExportOptionsAsync(initialFormat);
+        if (options is null) return;
+        var ext = options.Format == ExportFormat.Pdf ? ".pdf" : ".html";
+        var suggested = await tab.SuggestedFileNameAsync();
+        var path = await _dialogs.PickExportPathAsync(suggested, ext, tab.Document.Directory);
+        if (path is null) return;
+        try
+        {
+            if (options.Format == ExportFormat.Pdf) await _export.ExportPdfAsync(web, path, options);
+            else await _export.ExportHtmlAsync(web, suggested, path, options);
+            _dialogs.ShowInfo($"내보내기 완료: {path}");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BridgeException)
+        {
+            _log.LogError(ex, "export failed: {Path}", path);
+            _dialogs.ShowInfo($"내보내기 실패: {ex.Message}", isError: true);
+        }
+    }
+
+    [RelayCommand]
+    private async Task PrintAsync()
+    {
+        if (SelectedTab?.Surface is not WebEditorSurface web)
+        {
+            _dialogs.ShowInfo("인쇄는 Markdown 탭에서만 가능합니다.");
+            return;
+        }
+        try
+        {
+            await _export.PrintAsync(web);
+        }
+        catch (BridgeException ex)
+        {
+            _dialogs.ShowInfo($"인쇄 실패: {ex.Message}", isError: true);
         }
     }
 
@@ -384,6 +496,8 @@ public sealed partial class ShellViewModel : ObservableObject
                 case "ctrl+h": Find.Open(replace: true); break;
                 case "ctrl+k": Toolbar.RequestLinkFlyout(); break;
                 case "ctrl+shift+i": await InsertImageAsync(); break;
+                case "ctrl+shift+e": await ExportAsync(ExportFormat.Html); break;
+                case "ctrl+p": await PrintAsync(); break;
                 case "f5":
                     if (SelectedTab?.Surface is { } s) await s.ExecuteAsync("insert.datetime", new InsertTextParams(DateTime.Now.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture)));
                     break;

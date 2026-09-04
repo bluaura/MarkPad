@@ -39,6 +39,8 @@ public sealed partial class MainWindow : Window, IDialogService
             App.Current.Services.GetRequiredService<JumpListService>(),
             _theme,
             App.Current.Services.GetRequiredService<Core.Assets.AssetService>(),
+            App.Current.Services.GetRequiredService<ExportService>(),
+            App.Current.Services.GetRequiredService<Core.Recovery.RecoveryStore>(),
             this,
             App.Current.Services.GetRequiredService<ILogger<ShellViewModel>>());
 
@@ -65,9 +67,18 @@ public sealed partial class MainWindow : Window, IDialogService
 
     // ---------- lifecycle ----------
 
-    private void OnRootLoaded(object sender, RoutedEventArgs e)
+    private async void OnRootLoaded(object sender, RoutedEventArgs e)
     {
         _theme.NotifyActualTheme(Root.ActualTheme);
+        // ContentDialog needs a live XamlRoot, so the crash-recovery offer waits for Loaded (PRD §5.5).
+        try
+        {
+            await ViewModel.OfferRecoveryAsync();
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "recovery offer failed");
+        }
     }
 
     private void OnActualThemeChanged(FrameworkElement sender, object args)
@@ -82,6 +93,7 @@ public sealed partial class MainWindow : Window, IDialogService
         if (!await ViewModel.RequestExitAsync()) return;
         _closeConfirmed = true;
         await SaveWindowPlacementAsync();
+        await ViewModel.DisposeAllAsync(); // drops recovery snapshots + pending assets (normal exit)
         Close();
     }
 
@@ -347,6 +359,27 @@ public sealed partial class MainWindow : Window, IDialogService
             ContentDialogResult.Secondary => ImageInsertMode.Reference,
             _ => ImageInsertMode.Cancel,
         };
+    }
+
+    public async Task<ExportOptions?> ShowExportOptionsAsync(ExportFormat initialFormat)
+    {
+        var dialog = new Dialogs.ExportDialog(initialFormat) { XamlRoot = Root.XamlRoot };
+        return await dialog.ShowAsync() == ContentDialogResult.Primary ? dialog.Options : null;
+    }
+
+    public async Task<string?> PickExportPathAsync(string suggestedName, string extension, string? initialDirectory)
+    {
+        var picker = new FileSavePicker(AppWindow.Id)
+        {
+            SuggestedFileName = suggestedName,
+            DefaultFileExtension = extension,
+            SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
+            CommitButtonText = "내보내기",
+        };
+        if (!string.IsNullOrEmpty(initialDirectory) && Directory.Exists(initialDirectory)) picker.SuggestedFolder = initialDirectory;
+        picker.FileTypeChoices.Add(extension == ".pdf" ? "PDF" : "HTML", [extension]);
+        var result = await picker.PickSaveFileAsync();
+        return result?.Path is { Length: > 0 } p ? p : null;
     }
 
     public async Task<bool> ConfirmAsync(string title, string message, string primaryText)

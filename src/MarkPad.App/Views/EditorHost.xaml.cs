@@ -34,6 +34,9 @@ public sealed partial class EditorHost : UserControl, IAsyncDisposable
 
     public bool IsInitialized => _bridge is not null;
 
+    /// <summary>Raw CoreWebView2 for services that need browser APIs (PDF printing).</summary>
+    public CoreWebView2? CoreWebView2 => Web.CoreWebView2;
+
     public event EventHandler<ChangedEvent>? Changed;
     public event EventHandler<SelectionContext>? SelectionChanged;
     public event EventHandler<ShortcutEvent>? ShortcutRequested;
@@ -159,6 +162,27 @@ public sealed partial class EditorHost : UserControl, IAsyncDisposable
             return Task.FromResult<object?>(new ImageResolveResult(ResolveLocalImage(src) ?? src));
         });
 
+        // HTML export with embedded images (F-EXP-01): read a local image relative to the document folder.
+        bridge.RegisterHandler("asset.readBase64", async (p, ct) =>
+        {
+            var src = p?.TryGetProperty("src", out var s) == true ? s.GetString() ?? "" : "";
+            var local = ResolveLocalPath(src);
+            if (local is null || !File.Exists(local)) return new AssetReadResult(null);
+            var bytes = await File.ReadAllBytesAsync(local, ct);
+            var mime = Path.GetExtension(local).ToLowerInvariant() switch
+            {
+                ".png" => "image/png",
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".gif" => "image/gif",
+                ".webp" => "image/webp",
+                ".svg" => "image/svg+xml",
+                ".bmp" => "image/bmp",
+                ".avif" => "image/avif",
+                _ => "application/octet-stream",
+            };
+            return new AssetReadResult($"data:{mime};base64,{Convert.ToBase64String(bytes)}");
+        });
+
         bridge.RegisterHandler("asset.save", async (p, _) =>
         {
             if (p is null) throw new BridgeException("BAD_PARAM", "asset.save requires parameters");
@@ -167,6 +191,21 @@ public sealed partial class EditorHost : UserControl, IAsyncDisposable
                 ?? throw new BridgeException("BAD_PARAM", "malformed asset.save");
             return await handler(request);
         });
+    }
+
+    /// <summary>Markdown image src → local file path (relative to the mapped document folder), or null for remote/data.</summary>
+    private string? ResolveLocalPath(string src)
+    {
+        if (string.IsNullOrWhiteSpace(src)) return null;
+        if (Uri.TryCreate(src, UriKind.Absolute, out var uri))
+        {
+            if (uri.IsFile) return uri.LocalPath;
+            if (uri.Scheme is "http" or "https" or "data" or "blob") return null;
+        }
+        if (Path.IsPathRooted(src)) return src;
+        if (_mappedDocDir is null) return null;
+        var rel = Uri.UnescapeDataString(src.Split('#')[0].Split('?')[0]).Replace('/', Path.DirectorySeparatorChar);
+        return Path.GetFullPath(Path.Combine(_mappedDocDir, rel));
     }
 
     /// <summary>`C:\x\a.png` or `file:///C:/x/a.png` → `https://drive-c.markpad/x/a.png`.</summary>

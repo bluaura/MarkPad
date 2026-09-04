@@ -4,6 +4,7 @@
  */
 import type { Crepe } from '@milkdown/crepe'
 import { parserCtx, serializerCtx } from '@milkdown/kit/core'
+import type { EditorSettings } from '../../src/bridge-types'
 import { buildCrepe, defaultEditorSettings } from '../../src/crepe-factory'
 
 export interface HeadlessEditor {
@@ -47,12 +48,12 @@ function installDomShims(): void {
   }
 }
 
-export async function createHeadlessEditor(): Promise<HeadlessEditor> {
+export async function createHeadlessEditor(settings: EditorSettings = defaultEditorSettings): Promise<HeadlessEditor> {
   installDomShims()
   const root = document.createElement('div')
   document.body.appendChild(root)
 
-  const crepe = buildCrepe(root, '', defaultEditorSettings, { headless: true })
+  const crepe = buildCrepe(root, '', settings, { headless: true })
   await crepe.create()
 
   return {

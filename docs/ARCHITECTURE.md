@@ -358,8 +358,8 @@ bridge.emit('ready', { version })
 | `view.setTheme` | `{mode, font…, zoom}` | | F-VIEW-08 |
 | `view.focus` / `view.scrollToTop` | | | |
 | `block.showSource` | `{pos}` | | F-EDIT-12 |
-| `export.renderHtml` | `{inlineImages, theme}` | `{html, css}` | F-EXP-01 |
-| `export.preparePrint` / `export.restore` | `{pageSize}` | | F-EXP-02 |
+| `export.renderHtml` | `{inlineImages, theme}` | `{html, css, hasMath}` | F-EXP-01. unified(remark-gfm/math/frontmatter → rehype-raw → rehype-katex) + Lezer `classHighlighter`(편집기와 같은 색), mermaid→SVG. 이미지는 `asset.readBase64`로 data URL. KaTeX CSS는 `hasMath`일 때 CDN `<link>` (폰트 인라인 불가) |
+| `export.preparePrint` / `export.restore` | `{theme, pageSize}` | | F-EXP-02. `<html class="mp-print">` + `print.css`, readonly, 라이트 테마 스냅샷/복원 |
 | `history.undo` / `history.redo` | | | F-EDIT-06 |
 | `edit.cut/copy/paste/selectAll` | | | |
 
@@ -376,7 +376,7 @@ bridge.emit('ready', { version })
 | evt | `files.dropped` | `{files: [{name, text}]}` — 편집기 위에 md/txt를 드롭한 경우. WebView2는 파일 경로를 노출하지 않으므로 호스트가 **제목 없는 복사본**으로 연다. 탭 줄·툴바·상태바 드롭은 XAML `Drop`으로 원본 경로를 연다 |
 | req | `asset.save` | `{bytesBase64, mime, suggestedName?}` → `{relPath}` |
 | req | `asset.pick` | — → `{relPath, alt}` (파일 대화상자) |
-| req | `asset.readBase64` | `{src}` → `{dataUrl}` (HTML 내보내기 임베드용) |
+| req | `asset.readBase64` | `{src}` → `{dataUrl \| null}` (HTML 내보내기 임베드용; 문서 폴더 상대·절대 로컬 경로만, 원격은 null) |
 | req | `link.open` | `{href}` → `{ok}` (외부 브라우저 또는 md 새 탭) |
 | req | `image.resolve` | `{src}` → `{url}` (드라이브 매핑이 필요한 절대 경로: `C:\x\a.png` / `file:///C:/x/a.png` → `https://drive-c.markpad/x/a.png`, 드라이브별 지연 매핑) |
 | evt | `find.result` | `{count, index}` |
@@ -411,7 +411,7 @@ C# DTO는 `Bridge/BridgeMessages.cs`에 `record`로 정의하고 `System.Text.Js
   - 포함: `table.align`(행별 후행 빈 셀 제거 후 최대 폭으로 정규화), `code.lang/meta/value`, 링크 `url/title`, 이미지 `url/alt/title`, `heading.depth`, `listItem.checked`, `html.value`(공백·자기닫힘 정규화: `<br >` ≡ `<br />`).
   - 무시: 강조·목록 기호, 이스케이프, 표 정렬 공백(AST에 없음), `list/listItem.spread`, 텍스트·인라인 코드 내부 공백 차이, `<br />`만 있는 표 셀.
 - 엔진 보정(`crepe-factory.ts`): `remarkPreserveEmptyLinePlugin` 제거(빈 문단/셀 `<br />` 방지), `image-alt`(alt 보존), `code-meta`(info string 보존).
-- 리스트 하나가 최상위 블록이므로, 항목 하나만 고쳐도 리스트 전체가 재직렬화된다. 이를 완화하기 위해 `list`와 `blockquote`는 **한 단계 더 내려가서 자식 단위로 재귀 정렬**한다(2단계 한정).
+- 리스트 하나가 최상위 블록이므로, 항목 하나만 고쳐도 리스트 전체가 재직렬화된다. 이를 완화하기 위해 `list`와 `blockquote`는 **한 단계 더 내려가서 자식 단위로 재귀 정렬**한다(2단계 한정). 구현(T-34, `mergeBlock`): 최상위 정렬에서 A-only/B-only가 맞닿은 구간을 인덱스 순으로 짝지어, 같은 종류(list는 `ordered` 동일)이고 자식 중 하나라도 일치하면 자식 정렬 결과로 조립한다. 편집기에서 온 항목은 **원본 목록의 마커(`-`/`*`/`+`, `1.`/`1)`)로 통일**한다 — 마커가 다르면 CommonMark가 새 목록으로 해석하기 때문. 인용은 자식 범위를 줄 시작(`> ` 포함)까지 넓혀 자른다.
 - 호스트 측 후처리: EOL 복원, BOM, 끝 개행.
 - 검증: `corpus/roundtrip/*.md` 각각을 load→serializeForSave(무편집) 했을 때 `diff == 0`이어야 한다(vitest). 편집 케이스는 "H1 하나 수정 시 변경 블록 수 == 1" 류의 스냅샷 테스트.
 

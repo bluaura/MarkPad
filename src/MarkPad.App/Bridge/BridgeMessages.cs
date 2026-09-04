@@ -61,6 +61,11 @@ public sealed record SetReadonlyParams(bool Value);
 public sealed record FindParams(string Query, bool CaseSensitive, bool WholeWord);
 public sealed record FindReplaceParams(string Replacement);
 public sealed record FindResult(int Count, int Index);
+public sealed record ExportRenderHtmlParams(bool InlineImages, string Theme);
+public sealed record ExportRenderHtmlResult(string Html, string Css, bool HasMath);
+public sealed record ExportPreparePrintParams(string Theme, string PageSize);
+public sealed record AssetReadParams(string Src);
+public sealed record AssetReadResult(string? DataUrl);
 public sealed record RewriteAssetPathsParams(Dictionary<string, string> Map);
 public sealed record RewriteAssetPathsResult(int Count);
 
@@ -120,6 +125,11 @@ public sealed record ImageResolveResult(string Url);
 [JsonSerializable(typeof(FindParams))]
 [JsonSerializable(typeof(FindReplaceParams))]
 [JsonSerializable(typeof(FindResult))]
+[JsonSerializable(typeof(ExportRenderHtmlParams))]
+[JsonSerializable(typeof(ExportRenderHtmlResult))]
+[JsonSerializable(typeof(ExportPreparePrintParams))]
+[JsonSerializable(typeof(AssetReadParams))]
+[JsonSerializable(typeof(AssetReadResult))]
 [JsonSerializable(typeof(RewriteAssetPathsParams))]
 [JsonSerializable(typeof(RewriteAssetPathsResult))]
 [JsonSerializable(typeof(Dictionary<string, string>))]

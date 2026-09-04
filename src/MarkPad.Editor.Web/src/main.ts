@@ -3,7 +3,9 @@ import './styles/editor.css'
 
 import { bridge } from './bridge'
 import type { EditorSettings } from './bridge-types'
+import './styles/print.css'
 import { registerDocHandlers } from './handlers/doc'
+import { registerExportHandlers } from './handlers/export'
 import { registerFindHandlers } from './handlers/find'
 import { registerFormatHandlers } from './handlers/format'
 import { registerInsertHandlers } from './handlers/insert'
@@ -19,6 +21,7 @@ registerFormatHandlers()
 registerInsertHandlers()
 registerViewHandlers()
 registerFindHandlers()
+registerExportHandlers()
 installHostKeymap()
 installFileDrop()
 applyTheme(defaultTheme)

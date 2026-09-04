@@ -10,6 +10,34 @@ import { formatKeymap } from './plugins/format-keymap'
 import { imageAltPlugin } from './plugins/image-alt'
 import { linkClickPlugin } from './plugins/link-click'
 
+let mermaidSeq = 0
+let mermaidTimer = 0
+
+function renderMermaidPreview(language: string, content: string, apply: (value: null | string | HTMLElement) => void): void | null {
+  if (language !== 'mermaid') return null
+  if (!content.trim()) {
+    apply(null)
+    return
+  }
+  window.clearTimeout(mermaidTimer)
+  mermaidTimer = window.setTimeout(async () => {
+    try {
+      const mermaid = (await import('mermaid')).default
+      mermaid.initialize({ startOnLoad: false, theme: document.documentElement.dataset['theme'] === 'dark' ? 'dark' : 'default', securityLevel: 'strict' })
+      const { svg } = await mermaid.render(`mp-mermaid-${++mermaidSeq}`, content)
+      const holder = document.createElement('div')
+      holder.className = 'mp-mermaid-preview'
+      holder.innerHTML = svg
+      apply(holder)
+    } catch (err) {
+      const pre = document.createElement('pre')
+      pre.className = 'mp-mermaid-error'
+      pre.textContent = String(err instanceof Error ? err.message : err)
+      apply(pre)
+    }
+  }, 300)
+}
+
 export interface CrepeFactoryOptions {
   /** Headless (vitest/jsdom): skip features that need layout or a host. */
   headless?: boolean
@@ -56,6 +84,8 @@ export function buildCrepe(root: HTMLElement, defaultValue: string, settings: Ed
         noResultText: '결과 없음',
         copyText: '복사',
         previewLabel: '미리보기',
+        // PRD F-VIEW-06 / T-47: mermaid preview under the code (dynamic import keeps the main bundle small).
+        renderPreview: settings.markdown.extMermaid && !headless ? renderMermaidPreview : () => null,
       },
       [Crepe.Feature.LinkTooltip]: {
         inputPlaceholder: '링크 주소 입력…',

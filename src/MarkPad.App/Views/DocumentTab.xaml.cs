@@ -29,6 +29,31 @@ public sealed partial class DocumentTab : UserControl
 
     public DocumentViewModel ViewModel { get; }
 
+    private async Task<WebEditorSurface> CreateWebSurfaceAsync()
+    {
+        var host = new EditorHost();
+        SurfaceHost.Child = host;
+        var web = new WebEditorSurface(host);
+        host.RendererCrashed += OnRendererCrashed;
+        await web.InitializeAsync();
+        return web;
+    }
+
+    /// <summary>ARCHITECTURE §7.1: WebView2 ProcessFailed → new surface + last snapshot (T-42).</summary>
+    private async void OnRendererCrashed(object? sender, EventArgs e)
+    {
+        if (sender is EditorHost crashed) crashed.RendererCrashed -= OnRendererCrashed;
+        try
+        {
+            var replacement = await CreateWebSurfaceAsync();
+            await ViewModel.RecoverSurfaceAsync(replacement);
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "renderer recovery failed for {Title}", ViewModel.Title);
+        }
+    }
+
     public string EncodingMessage => $"이 파일은 {ViewModel.EncodingDescription} 인코딩입니다. 편집하려면 UTF-8로 변환합니다 (저장 시 UTF-8로 기록).";
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -46,11 +71,7 @@ public sealed partial class DocumentTab : UserControl
             }
             else
             {
-                var host = new EditorHost();
-                SurfaceHost.Child = host;
-                var web = new WebEditorSurface(host);
-                await web.InitializeAsync();
-                surface = web;
+                surface = await CreateWebSurfaceAsync();
             }
             await ViewModel.AttachSurfaceAsync(surface);
             await ViewModel.FocusAsync();

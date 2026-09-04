@@ -1,0 +1,42 @@
+/* PDF/print pipeline (PRD F-EXP-02, T-41): applied while <html> has the `mp-print` class. */
+html.mp-print,
+html.mp-print body {
+  background: #ffffff !important;
+  color: #1b1b1b !important;
+  overflow: visible !important;
+  height: auto !important;
+}
+html.mp-print .milkdown .ProseMirror {
+  max-width: none !important;
+  padding: 0 !important;
+  caret-color: transparent;
+}
+html.mp-print .mp-context-bar,
+html.mp-print .markpad-devbar,
+html.mp-print .milkdown .cm-gutters,
+html.mp-print .milkdown [data-type='hardbreak']::after,
+html.mp-print .milkdown .image-wrapper .operation,
+html.mp-print .milkdown milkdown-code-block .tools,
+html.mp-print .milkdown .mp-find-match {
+  display: none !important;
+  background: transparent !important;
+}
+html.mp-print .milkdown pre,
+html.mp-print .milkdown .cm-editor,
+html.mp-print .milkdown table,
+html.mp-print .milkdown blockquote,
+html.mp-print .milkdown img,
+html.mp-print .milkdown milkdown-code-block {
+  break-inside: avoid;
+}
+html.mp-print .milkdown h1,
+html.mp-print .milkdown h2,
+html.mp-print .milkdown h3 {
+  break-after: avoid;
+}
+html.mp-print .milkdown .cm-editor {
+  border: 1px solid #d6d6d6;
+}
+html.mp-print .milkdown .ProseMirror ::selection {
+  background: transparent;
+}

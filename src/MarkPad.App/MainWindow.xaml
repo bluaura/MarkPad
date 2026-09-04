@@ -46,6 +46,8 @@
             <KeyboardAccelerator Key="H" Modifiers="Control" Invoked="OnAccelerator" />
             <KeyboardAccelerator Key="K" Modifiers="Control" Invoked="OnAccelerator" />
             <KeyboardAccelerator Key="I" Modifiers="Control,Shift" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="E" Modifiers="Control,Shift" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="P" Modifiers="Control" Invoked="OnAccelerator" />
             <KeyboardAccelerator Key="F5" Invoked="OnAccelerator" />
             <KeyboardAccelerator Key="Number1" Modifiers="Control,Menu" Invoked="OnAccelerator" />
             <KeyboardAccelerator Key="Number2" Modifiers="Control,Menu" Invoked="OnAccelerator" />
@@ -98,6 +100,9 @@
                 </Button>
                 <Button Height="32" Padding="8,0" Margin="1,0" Background="Transparent" BorderThickness="0" Command="{x:Bind ViewModel.SaveCommand}" ToolTipService.ToolTip="저장 (Ctrl+S)" AutomationProperties.Name="저장">
                     <FontIcon Glyph="&#xE74E;" FontSize="16" />
+                </Button>
+                <Button Height="32" Padding="8,0" Margin="1,0" Background="Transparent" BorderThickness="0" Command="{x:Bind ViewModel.ExportCommand}" ToolTipService.ToolTip="내보내기 HTML/PDF (Ctrl+Shift+E)" AutomationProperties.Name="내보내기">
+                    <FontIcon Glyph="&#xEDE1;" FontSize="16" />
                 </Button>
                 <Border Width="1" Height="20" Margin="6,0" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
             </StackPanel>

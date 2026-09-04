@@ -16,7 +16,7 @@
 | 1MB md 열기 | ≤ 4초, UI 프리징 없음 | **2.69초** (프리징 여부는 미측정 — `doc.load`는 WebView 스레드에서 동기 파싱) | ✅ (프리징은 T-43에서 확인) |
 | 타이핑 지연 | ≤ 50ms | 미측정 (DevTools Performance 수동, T-10과 함께) | ⏳ |
 | 유휴 메모리 (탭 1개, WebView2 포함) | ≤ 150MB | **작업 집합 합계 540MB / 프라이빗 합계 269MB** — MarkPad.exe 158MB(프라이빗 75MB) + msedgewebview2 6개 프로세스 382MB(프라이빗 194MB) | ❌ |
-| 설치 용량 | ≤ 60MB | Release 출력 폴더 **153MB** (self-contained WASDK 포함; 편집기 번들 4.2MB) | ❌ (MSIX framework-dependent로 재측정, T-44) |
+| 설치 용량 | ≤ 60MB | Release 출력 폴더 153MB(self-contained 개발 빌드) → **MSIX(framework-dependent) 29.9MB** (`build/pack.ps1`, 2026-09-04) | ✅ (MSIX 기준) |
 
 ## 상세
 

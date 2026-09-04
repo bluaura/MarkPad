@@ -2,6 +2,7 @@ using MarkPad.App.Services;
 using MarkPad.Core.Assets;
 using MarkPad.Core.Documents;
 using MarkPad.Core.Mru;
+using MarkPad.Core.Recovery;
 using MarkPad.Core.Settings;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -56,6 +57,7 @@ public partial class App : Application
         {
             _ = _window.OpenFilesAsync(initial);
         }
+        // Crash-recovery offer runs from MainWindow.OnRootLoaded (needs a XamlRoot for the dialog).
     }
 
     private static IServiceProvider ConfigureServices()
@@ -67,6 +69,8 @@ public partial class App : Application
         services.AddSingleton(new RecentFilesStore(Path.Combine(LocalDataDir, "recent.json")));
         services.AddSingleton<ThemeService>();
         services.AddSingleton<JumpListService>();
+        services.AddSingleton<ExportService>();
+        services.AddSingleton(new RecoveryStore(Path.Combine(LocalDataDir, "recovery")));
         services.AddSingleton(sp => new AssetService(
             Path.Combine(LocalDataDir, "pending-assets"),
             () => sp.GetRequiredService<SettingsStore>().Current.Images.FolderName));
@@ -76,6 +80,13 @@ public partial class App : Application
     private void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
     {
         Services.GetRequiredService<ILogger<App>>().LogCritical(e.Exception, "Unhandled exception");
-        // Recovery snapshot flush arrives with T-42.
+        try
+        {
+            _window?.ViewModel.FlushSnapshotsBlocking(); // PRD §5.5: keep unsaved work recoverable
+        }
+        catch (Exception ex)
+        {
+            Services.GetRequiredService<ILogger<App>>().LogError(ex, "snapshot flush failed");
+        }
     }
 }

@@ -6,7 +6,9 @@ using MarkPad.App.Editing;
 using MarkPad.App.Services;
 using MarkPad.Core.Assets;
 using MarkPad.Core.Documents;
+using MarkPad.Core.Recovery;
 using MarkPad.Core.Settings;
+using Microsoft.UI.Dispatching;
 
 namespace MarkPad.App.ViewModels;
 
@@ -20,20 +22,45 @@ public sealed partial class DocumentViewModel : ObservableObject, IAsyncDisposab
     private readonly ThemeService _theme;
     private readonly SettingsStore _settings;
     private readonly AssetService _assets;
+    private readonly RecoveryStore _recovery;
     private readonly string? _suggestedName;
+    private string? _initialText;
+    private string? _lastSnapshotText;
+    private DispatcherQueueTimer? _snapshotTimer;
+    private bool _snapshotBusy;
 
-    public DocumentViewModel(Document document, DocumentIO io, ThemeService theme, SettingsStore settings, AssetService assets, string? suggestedName = null)
+    /// <summary>Snapshot cadence (PRD §5.5: 5초).</summary>
+    public static TimeSpan SnapshotInterval { get; } = TimeSpan.FromSeconds(5);
+
+    public DocumentViewModel(
+        Document document,
+        DocumentIO io,
+        ThemeService theme,
+        SettingsStore settings,
+        AssetService assets,
+        RecoveryStore recovery,
+        string? suggestedName = null,
+        string? initialText = null)
     {
         Document = document;
         _io = io;
         _theme = theme;
         _settings = settings;
         _assets = assets;
+        _recovery = recovery;
         _suggestedName = suggestedName;
+        _initialText = initialText;
+        if (initialText is not null) document.IsDirty = true;
         IsDirty = document.IsDirty;
         IsReadOnly = document.IsReadOnly;
         RefreshLabels();
     }
+
+    /// <summary>Recovery snapshot id: unique per process + document.</summary>
+    public string SnapshotId => $"{Environment.ProcessId}-{Document.Id}";
+
+    /// <summary>Messages for the shell InfoBar (e.g. renderer recovery).</summary>
+    public event EventHandler<string>? Notification;
 
     public Document Document { get; private set; }
 
@@ -97,15 +124,88 @@ public sealed partial class DocumentViewModel : ObservableObject, IAsyncDisposab
     {
         if (Surface is null) return;
         var options = new EditorLoadOptions(Document.Path, Document.IsReadOnly, _theme.BuildEditorSettings());
-        await Surface.LoadAsync(Document.OriginalText, options);
+        var text = _initialText ?? Document.OriginalText;
+        await Surface.LoadAsync(text, options);
         await Surface.SetDocumentPathAsync(Document.Path, _assets.DisplayRootFor(Document));
         IsLoaded = true;
         RefreshLabels();
-        if (Document.IsDirty)
+        if (_initialText is not null || Document.IsDirty)
         {
-            // Documents created from dropped text start dirty even though the surface baseline equals the text.
+            // Recovered/dropped content: the surface baseline equals the text, but it is unsaved relative to the file.
+            _lastSnapshotText = text;
+            _initialText = null;
+            Document.IsDirty = true;
             IsDirty = true;
+            EnsureSnapshotTimer();
         }
+    }
+
+    // ---------- crash recovery (PRD §5.5, T-42) ----------
+
+    private RecoverySnapshot SnapshotMeta => new(SnapshotId, Document.Path, Title, Document.Kind, DateTimeOffset.Now);
+
+    private void EnsureSnapshotTimer()
+    {
+        if (_snapshotTimer is not null) return;
+        var queue = DispatcherQueue.GetForCurrentThread();
+        if (queue is null) return;
+        _snapshotTimer = queue.CreateTimer();
+        _snapshotTimer.Interval = SnapshotInterval;
+        _snapshotTimer.IsRepeating = true;
+        _snapshotTimer.Tick += (_, _) => _ = SnapshotAsync();
+        _snapshotTimer.Start();
+    }
+
+    private void StopSnapshots(bool deleteFiles)
+    {
+        _snapshotTimer?.Stop();
+        _snapshotTimer = null;
+        if (deleteFiles) _recovery.Delete(SnapshotId);
+    }
+
+    private async Task SnapshotAsync()
+    {
+        if (_snapshotBusy || !IsDirty || Surface is null || !Surface.IsReady) return;
+        _snapshotBusy = true;
+        try
+        {
+            var text = await Surface.GetTextAsync();
+            if (string.Equals(text, _lastSnapshotText, StringComparison.Ordinal)) return;
+            _lastSnapshotText = text;
+            await _recovery.SaveAsync(SnapshotMeta, text);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BridgeException)
+        {
+            // Snapshots are best effort; the next tick retries.
+        }
+        finally
+        {
+            _snapshotBusy = false;
+        }
+    }
+
+    /// <summary>Unhandled-exception path: write the last known text synchronously (no bridge round trip possible).</summary>
+    public void FlushSnapshotBlocking()
+    {
+        if (IsDirty && _lastSnapshotText is not null) _recovery.SaveBlocking(SnapshotMeta, _lastSnapshotText);
+    }
+
+    /// <summary>WebView2 renderer died: swap in a fresh surface and reload the last snapshot (or the file).</summary>
+    public async Task RecoverSurfaceAsync(IEditorSurface replacement)
+    {
+        var old = Surface;
+        Surface = null;
+        IsLoaded = false;
+        if (old is not null)
+        {
+            old.ContentChanged -= OnContentChanged;
+            try { await old.DisposeAsync(); } catch (Exception ex) when (ex is BridgeException or InvalidOperationException) { }
+        }
+        if (IsDirty && _lastSnapshotText is not null) _initialText = _lastSnapshotText;
+        await AttachSurfaceAsync(replacement);
+        Notification?.Invoke(this, IsDirty
+            ? "편집기 프로세스가 중단되어 마지막 스냅샷(최대 5초 전)으로 복구했습니다."
+            : "편집기 프로세스가 중단되어 파일을 다시 불러왔습니다.");
     }
 
     /// <summary>Replace the underlying document (external change reload, T-52) and reload the surface.</summary>
@@ -141,6 +241,7 @@ public sealed partial class DocumentViewModel : ObservableObject, IAsyncDisposab
         await Surface.MarkSavedAsync();
         await Surface.SetDocumentPathAsync(Document.Path, _assets.DisplayRootFor(Document));
         IsDirty = false;
+        StopSnapshots(deleteFiles: true);
         RefreshLabels();
         OnPropertyChanged(nameof(Path));
     }
@@ -204,6 +305,8 @@ public sealed partial class DocumentViewModel : ObservableObject, IAsyncDisposab
         WordCount = e.Words;
         CharCount = e.Chars;
         Line = e.Line;
+        if (IsDirty) EnsureSnapshotTimer();
+        else if (IsLoaded) StopSnapshots(deleteFiles: true);
     }
 
     private void RefreshLabels()
@@ -218,6 +321,7 @@ public sealed partial class DocumentViewModel : ObservableObject, IAsyncDisposab
 
     public async ValueTask DisposeAsync()
     {
+        StopSnapshots(deleteFiles: true);
         if (Document.Path is null) _assets.DiscardPending(Document);
         if (Surface is not null)
         {
