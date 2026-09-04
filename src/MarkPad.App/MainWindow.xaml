@@ -52,6 +52,9 @@
             <KeyboardAccelerator Key="E" Modifiers="Control,Shift" Invoked="OnAccelerator" />
             <KeyboardAccelerator Key="P" Modifiers="Control" Invoked="OnAccelerator" />
             <KeyboardAccelerator Key="F5" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="Add" Modifiers="Control" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="Subtract" Modifiers="Control" Invoked="OnAccelerator" />
+            <KeyboardAccelerator Key="Number0" Modifiers="Control" Invoked="OnAccelerator" />
             <KeyboardAccelerator Key="Number1" Modifiers="Control,Menu" Invoked="OnAccelerator" />
             <KeyboardAccelerator Key="Number2" Modifiers="Control,Menu" Invoked="OnAccelerator" />
             <KeyboardAccelerator Key="Number3" Modifiers="Control,Menu" Invoked="OnAccelerator" />
@@ -75,27 +78,10 @@
                  TabCloseRequested="OnTabCloseRequested"
                  SelectionChanged="OnTabSelectionChanged">
             <TabView.TabStripHeader>
-                <Grid x:Name="TitleBarLeft" Width="44" Height="40">
-                    <FontIcon Glyph="&#xE70B;" FontSize="16" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
-                </Grid>
-            </TabView.TabStripHeader>
-            <TabView.TabStripFooter>
-                <Grid x:Name="DragRegion" MinWidth="160" Height="40" />
-            </TabView.TabStripFooter>
-        </TabView>
-
-        <!-- Row 1: menu + file buttons + format toolbar -->
-        <Grid Grid.Row="1"
-              Visibility="{x:Bind ViewModel.ShowToolbar, Mode=OneWay}"
-              Background="{ThemeResource LayerFillColorDefaultBrush}"
-              BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
-              BorderThickness="0,1,0,1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <StackPanel Orientation="Horizontal" Padding="8,4,0,4">
-                <DropDownButton Height="32" Padding="8,0" Margin="1,0" Background="Transparent" BorderThickness="0" AutomationProperties.Name="메뉴" ToolTipService.ToolTip="메뉴">
+                <!-- App menu lives in the title bar so it stays reachable when the toolbar is hidden (Ctrl+Shift+T) -->
+                <StackPanel Orientation="Horizontal" Height="40" Padding="8,0,4,0" Spacing="2">
+                    <FontIcon Glyph="&#xE70B;" FontSize="16" Foreground="{ThemeResource AccentFillColorDefaultBrush}" VerticalAlignment="Center" Margin="0,0,4,0" />
+                <DropDownButton Height="32" Padding="6,0" Margin="0" VerticalAlignment="Center" Background="Transparent" BorderThickness="0" AutomationProperties.Name="메뉴" ToolTipService.ToolTip="메뉴">
                     <FontIcon Glyph="&#xE700;" FontSize="16" />
                     <DropDownButton.Flyout>
                         <MenuFlyout>
@@ -117,6 +103,24 @@
                         </MenuFlyout>
                     </DropDownButton.Flyout>
                 </DropDownButton>
+                </StackPanel>
+            </TabView.TabStripHeader>
+            <TabView.TabStripFooter>
+                <Grid x:Name="DragRegion" MinWidth="160" Height="40" />
+            </TabView.TabStripFooter>
+        </TabView>
+
+        <!-- Row 1: menu + file buttons + format toolbar -->
+        <Grid Grid.Row="1"
+              Visibility="{x:Bind ViewModel.ShowToolbar, Mode=OneWay}"
+              Background="{ThemeResource LayerFillColorDefaultBrush}"
+              BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+              BorderThickness="0,1,0,1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" Padding="8,4,0,4">
                 <Button Height="32" Padding="8,0" Margin="1,0" Background="Transparent" BorderThickness="0" Command="{x:Bind ViewModel.NewDocumentCommand}" ToolTipService.ToolTip="새 문서 (Ctrl+N)" AutomationProperties.Name="새 문서">
                     <FontIcon Glyph="&#xE8A5;" FontSize="16" />
                 </Button>

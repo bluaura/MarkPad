@@ -15,6 +15,7 @@ export function registerExportHandlers(): void {
     const result = await renderHtml(markdown, {
       inlineImages: !!p.inlineImages,
       theme: p.theme === 'dark' ? 'dark' : 'light',
+      highlight: s.settings.markdown.extHighlight,
       readImage: async (src) => {
         try {
           const r = await bridge.call<AssetReadResult>('asset.readBase64', { src })

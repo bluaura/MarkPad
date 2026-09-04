@@ -143,6 +143,8 @@
 
 **M2 마무리 (2026-09-04)**: T-58b 이미지 클릭 팝오버(alt·경로 편집, 삭제 — `image-props.spec` 2건), T-59 FlaUI 스모크 5종(`tests/MarkPad.App.UiTests`: 열기·편집+저장 round-trip·탭 추가/닫기·내보내기 대화상자·.txt 편집 저장 — `MARKPAD_UI_TESTS=1` 환경 변수와 잠금 해제된 데스크톱 필요, CI 기본 실행에서는 skip), T-60 접근성·현지화(`Strings/ko-KR`·`en-US/Resources.resw` + `x:Uid`(시작 화면·메뉴·패널 헤더) + `Loc` 헬퍼(대화상자·상태 문자열), 탭/패널/트리 `AutomationProperties.Name`, 편집기 `forced-colors` 고대비 CSS). Accessibility Insights 검사는 미실행.
 
+**M2 잔여 정리 (2026-09-04)**: 확대/축소 Ctrl+= / Ctrl+- / Ctrl+0(설정 `editor.zoom` 0.5~2.0, 전 탭 즉시 적용), `==하이라이트==` 확장(`plugins/highlight.ts`: remark 변환 + 마크 + 입력 규칙 + 직렬화 핸들러, HTML 내보내기 `<mark>`, `highlight.spec` 6건; 설정 OFF면 등록하지 않아 평문 유지), 앱 메뉴(☰)를 제목 표시줄로 이동(툴바 숨김 상태에서도 접근 가능), GitHub Actions CI(`.github/workflows/ci.yml`: npm test → Release 빌드 → xUnit → 서명 없는 MSIX 아티팩트, `v*` 태그 시 릴리스). 남은 M2 항목: 인라인 HTML 렌더(DOMPurify), T-43 성능 기록·메모리 절감, T-54 기본 앱 안내, 도움말/정보 메뉴.
+
 **M3 후보(P2)**: T-61 블록 드래그(Crepe BlockEdit 재활성 검토), T-62 맞춤법, T-63 DOCX, T-64 이미지 크기 조절, T-65 대용량 가상화.
 
 ---

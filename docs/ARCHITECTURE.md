@@ -259,7 +259,7 @@ crepe.editor
   .use(findPlugin)
   .use(outlinePlugin)
   .use(hostKeymapPlugin)      // 앱 단축키 가로채기
-  .use(highlightPlugin(settings.extHighlight))   // ==mark== (OFF면 등록 안 함)
+  .use(highlightPlugin(settings.extHighlight))   // ==mark== (OFF면 등록 안 함) — 구현: plugins/highlight.ts, micromark 확장 대신 mdast 텍스트 분할 변환 + remark-stringify handler
 crepe.on(l => l.markdownUpdated((ctx, md, prev) => bridge.emit('changed', {...})))
 await crepe.create()
 bridge.emit('ready', { version })

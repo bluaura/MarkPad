@@ -338,6 +338,17 @@ body {
 .mp-source-actions button { font: inherit; padding: 4px 10px; border: 1px solid var(--mp-border); border-radius: 4px; background: var(--mp-bg); color: var(--mp-fg); cursor: pointer; }
 .mp-source-actions button:first-child { background: var(--mp-accent); color: #fff; border-color: var(--mp-accent); }
 
+/* ---- ==highlight== extension (default OFF) ---- */
+.milkdown .ProseMirror mark.mp-highlight {
+  background: #fff59d;
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 0.1em;
+}
+:root[data-theme='dark'] .milkdown .ProseMirror mark.mp-highlight {
+  background: #6b5e00;
+}
+
 /* ---- image properties popover (F-IMG-05) ---- */
 .mp-img-panel {
   position: absolute; z-index: 30; display: flex; flex-direction: column; gap: 6px; padding: 10px; min-width: 320px;

@@ -8,6 +8,7 @@ import { contextBarPlugin } from './plugins/context-bar'
 import { findPlugin } from './plugins/find'
 import { formatKeymap } from './plugins/format-keymap'
 import { frontmatterPlugin } from './plugins/frontmatter'
+import { highlightPlugin, highlightStringifyHandler } from './plugins/highlight'
 import { outlinePlugin } from './plugins/outline'
 import { imageAltPlugin } from './plugins/image-alt'
 import { imagePropsPlugin } from './plugins/image-props'
@@ -103,6 +104,7 @@ export function buildCrepe(root: HTMLElement, defaultValue: string, settings: Ed
   crepe.editor.use(formatKeymap)
   crepe.editor.use(findPlugin)
   if (settings.markdown.frontMatter) crepe.editor.use(frontmatterPlugin)
+  if (settings.markdown.extHighlight) crepe.editor.use(highlightPlugin)
   if (!headless) {
     crepe.editor.use(linkClickPlugin)
     crepe.editor.use(contextBarPlugin)
@@ -121,6 +123,9 @@ export function buildCrepe(root: HTMLElement, defaultValue: string, settings: Ed
       fences: true,
       rule: '-' as const,
       ruleRepetition: 3,
+      ...(settings.markdown.extHighlight
+        ? { handlers: { ...(prev.handlers ?? {}), highlight: highlightStringifyHandler as never } }
+        : {}),
     }))
   })
 

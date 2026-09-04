@@ -157,6 +157,26 @@ public sealed partial class ShellViewModel : ObservableObject
         foreach (var t in Tabs) _ = t.ApplyThemeAsync();
     }
 
+    // ---------- zoom (PRD 4.3: Ctrl+= / Ctrl+- / Ctrl+0, 50%~200%) ----------
+
+    [RelayCommand]
+    private Task ZoomIn() => SetZoomAsync(_settings.Current.Editor.Zoom + 0.1);
+
+    [RelayCommand]
+    private Task ZoomOut() => SetZoomAsync(_settings.Current.Editor.Zoom - 0.1);
+
+    [RelayCommand]
+    private Task ZoomReset() => SetZoomAsync(1.0);
+
+    private async Task SetZoomAsync(double zoom)
+    {
+        zoom = Math.Round(Math.Clamp(zoom, 0.5, 2.0), 2);
+        if (Math.Abs(zoom - _settings.Current.Editor.Zoom) < 0.001) return;
+        await _settings.UpdateAsync(s => s.Editor.Zoom = zoom);
+        foreach (var t in Tabs) await t.ApplyThemeAsync();
+        _dialogs.ShowInfo($"확대/축소 {zoom * 100:0}%");
+    }
+
     // ---------- read-only toggle (PRD F-VIEW-09, T-58) ----------
 
     [RelayCommand]
@@ -622,6 +642,9 @@ public sealed partial class ShellViewModel : ObservableObject
                 case "ctrl+shift+o": ToggleOutline(); break;
                 case "ctrl+shift+b": ToggleSidebar(); break;
                 case "ctrl+,": await OpenSettingsAsync(); break;
+                case "ctrl+=": await ZoomIn(); break;
+                case "ctrl+-": await ZoomOut(); break;
+                case "ctrl+0": await ZoomReset(); break;
                 case "f5":
                     if (SelectedTab?.Surface is { } s) await s.ExecuteAsync("insert.datetime", new InsertTextParams(DateTime.Now.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture)));
                     break;

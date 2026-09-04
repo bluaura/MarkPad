@@ -279,6 +279,10 @@ public sealed partial class MainWindow : Window, IDialogService
         {
             >= Windows.System.VirtualKey.Number0 and <= Windows.System.VirtualKey.Number9 => ((int)sender.Key - (int)Windows.System.VirtualKey.Number0).ToString(System.Globalization.CultureInfo.InvariantCulture),
             (Windows.System.VirtualKey)188 => ",", // VK_OEM_COMMA
+            (Windows.System.VirtualKey)187 => "=", // VK_OEM_PLUS
+            (Windows.System.VirtualKey)189 => "-", // VK_OEM_MINUS
+            Windows.System.VirtualKey.Add => "=",
+            Windows.System.VirtualKey.Subtract => "-",
             _ => sender.Key.ToString().ToLowerInvariant(),
         };
         parts.Add(key);

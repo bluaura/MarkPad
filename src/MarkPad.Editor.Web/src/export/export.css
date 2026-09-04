@@ -77,6 +77,8 @@ th, td { border: 1px solid var(--mp-border); padding: 6px 12px; }
 th { background: var(--mp-surface); font-weight: 600; }
 img { max-width: 100%; }
 del { color: var(--mp-fg-muted); }
+mark { background: #fff59d; color: inherit; border-radius: 2px; padding: 0 0.1em; }
+.markpad-dark mark { background: #6b5e00; }
 .mermaid svg { max-width: 100%; height: auto; }
 .footnotes { font-size: 0.9em; color: var(--mp-fg-muted); border-top: 1px solid var(--mp-border); margin-top: 2em; padding-top: 0.5em; }
 sup a { text-decoration: none; }

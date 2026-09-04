@@ -29,7 +29,7 @@ import {
   setAlignCommand,
   toggleStrikethroughCommand,
 } from '@milkdown/kit/preset/gfm'
-import { lift } from '@milkdown/kit/prose/commands'
+import { lift, toggleMark as toggleMarkCommand } from '@milkdown/kit/prose/commands'
 import { AllSelection, type EditorState, type Transaction } from '@milkdown/kit/prose/state'
 import type { EditorView } from '@milkdown/kit/prose/view'
 import { callCommand, insert } from '@milkdown/kit/utils'
@@ -59,8 +59,13 @@ export function toggleMark(editor: CommandTarget, mark: FormatToggleParams['mark
     case 'code':
       editor.action(callCommand(toggleInlineCodeCommand.key))
       return
-    case 'highlight':
-      throw new BridgeError('UNSUPPORTED', 'highlight extension is not enabled')
+    case 'highlight': {
+      const view = editor.view()
+      const type = view.state.schema.marks['highlight']
+      if (!type) throw new BridgeError('UNSUPPORTED', 'highlight extension is not enabled (settings.markdown.extHighlight)')
+      toggleMarkCommand(type)(view.state, view.dispatch)
+      return
+    }
   }
 }
 

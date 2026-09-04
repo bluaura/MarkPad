@@ -15,12 +15,16 @@ import remarkParse from 'remark-parse'
 import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
 import { visit } from 'unist-util-visit'
+import type { Root as MdastRoot } from 'mdast'
 import { bridge } from '../bridge'
+import { splitHighlights } from '../plugins/highlight'
 import exportCss from './export.css?inline'
 
 export interface RenderHtmlOptions {
   inlineImages: boolean
   theme: 'light' | 'dark'
+  /** Render `==text==` as <mark> (settings.markdown.extHighlight). */
+  highlight?: boolean
   /** Resolve local image src to a data URL (host reads the file). Omit in tests. */
   readImage?: (src: string) => Promise<string | null>
 }
@@ -89,7 +93,18 @@ export async function renderHtml(markdown: string, options: RenderHtmlOptions): 
     .use(remarkGfm)
     .use(remarkFrontmatter, ['yaml'])
     .use(remarkMath)
-    .use(remarkRehype, { allowDangerousHtml: true })
+    .use(options.highlight ? [() => (tree: MdastRoot) => splitHighlights(tree)] : [])
+    .use(remarkRehype, {
+      allowDangerousHtml: true,
+      handlers: {
+        highlight: (state: { all: (n: unknown) => unknown[] }, node: unknown) => ({
+          type: 'element',
+          tagName: 'mark',
+          properties: {},
+          children: state.all(node),
+        }),
+      } as never,
+    })
     .use(rehypeRaw)
     .use(rehypeKatex)
 

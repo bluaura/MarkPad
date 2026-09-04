@@ -41,6 +41,13 @@ describe('renderHtml (F-EXP-01)', () => {
     expect(r.html).toContain('src="https://x/y.png"')
   })
 
+  it('renders ==highlight== as <mark> only when enabled', async () => {
+    const on = await renderHtml('a ==b== c', { inlineImages: false, theme: 'light', highlight: true })
+    expect(on.html).toContain('<mark>b</mark>')
+    const off = await renderHtml('a ==b== c', { inlineImages: false, theme: 'light' })
+    expect(off.html).toContain('a ==b== c')
+  })
+
   it('keeps inline HTML', async () => {
     const r = await renderHtml('<details><summary>x</summary>\n\nbody\n\n</details>', { inlineImages: false, theme: 'light' })
     expect(r.html).toContain('<details>')
