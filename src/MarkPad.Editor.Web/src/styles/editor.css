@@ -318,7 +318,7 @@ body {
 .mp-fm-btn:hover:not(:disabled) { background: var(--mp-hover); }
 .mp-fm-btn:disabled { opacity: 0.4; cursor: default; }
 .mp-fm-chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
-.mp-fm-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 4px 1px 8px; border-radius: 10px; background: var(--mp-surface-low); font-family: var(--mp-font-mono); font-size: 0.9em; }
+.mp-fm-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 4px 1px 8px; border-radius: 10px; background: var(--mp-surface-low); font-family: var(--mp-font-mono); font-size: 0.9em; white-space: nowrap; }
 .mp-fm-chip .mp-fm-btn { border: 0; padding: 0 4px; background: transparent; }
 .mp-fm-chip-input { width: 120px !important; }
 .mp-fm-add, .mp-fm-foot { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
