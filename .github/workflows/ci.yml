@@ -46,7 +46,7 @@ jobs:
       - name: Core tests
         run: dotnet test tests/MarkPad.Core.Tests/MarkPad.Core.Tests.csproj -c Release --no-restore --logger "trx;LogFileName=core.trx"
 
-      - name: UI tests (skipped: no interactive desktop)
+      - name: "UI tests (skipped: no interactive desktop)"
         run: dotnet test tests/MarkPad.App.UiTests/MarkPad.App.UiTests.csproj -c Release --no-restore
 
       - name: MSIX (unsigned)
