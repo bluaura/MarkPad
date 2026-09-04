@@ -100,6 +100,9 @@
                             <MenuFlyoutItem x:Uid="MenuReadOnly" Text="읽기 전용 토글" Command="{x:Bind ViewModel.ToggleReadOnlyCommand}" />
                             <MenuFlyoutSeparator />
                             <MenuFlyoutItem x:Uid="MenuSettings" Text="설정… (Ctrl+,)" Command="{x:Bind ViewModel.OpenSettingsCommand}" />
+                            <MenuFlyoutItem x:Uid="MenuDefaultApp" Text="Markdown 기본 앱 설정…" Command="{x:Bind ViewModel.OpenDefaultAppsCommand}" />
+                            <MenuFlyoutSeparator />
+                            <MenuFlyoutItem x:Uid="MenuAbout" Text="MarkPad 정보" Command="{x:Bind ViewModel.ShowAboutCommand}" />
                         </MenuFlyout>
                     </DropDownButton.Flyout>
                 </DropDownButton>

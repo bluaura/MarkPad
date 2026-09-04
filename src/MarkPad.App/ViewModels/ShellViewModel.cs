@@ -157,6 +157,39 @@ public sealed partial class ShellViewModel : ObservableObject
         foreach (var t in Tabs) _ = t.ApplyThemeAsync();
     }
 
+    // ---------- help / default app (PRD 4.1 [도움말], F-FILE-10 / T-54) ----------
+
+    [RelayCommand]
+    private Task ShowAboutAsync() => _dialogs.ShowAboutAsync();
+
+    /// <summary>Windows lets only the user pick default apps; open the Settings page for .md (PRD F-FILE-10).</summary>
+    [RelayCommand]
+    private async Task OpenDefaultAppsAsync()
+    {
+        await Launcher.LaunchUriAsync(new Uri("ms-settings:defaultapps"));
+        _dialogs.ShowInfo("설정 › 기본 앱에서 'MarkPad'를 선택하거나, '.md' 파일 형식에 MarkPad를 지정하세요. (설치 형태가 MSIX일 때만 목록에 나타납니다)");
+    }
+
+    /// <summary>First run of a packaged install: point at the default-app setting once (T-54).</summary>
+    public async Task OfferDefaultAppOnceAsync()
+    {
+        if (_settings.Current.Ui.DefaultAppPromptShown || !IsPackaged()) return;
+        await _settings.UpdateAsync(s => s.Ui.DefaultAppPromptShown = true);
+        _dialogs.ShowInfo("MarkPad를 .md 기본 앱으로 쓰려면 메뉴 › 'Markdown 기본 앱 설정…'을 여세요.");
+    }
+
+    private static bool IsPackaged()
+    {
+        try
+        {
+            return Windows.ApplicationModel.Package.Current is not null;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
     // ---------- zoom (PRD 4.3: Ctrl+= / Ctrl+- / Ctrl+0, 50%~200%) ----------
 
     [RelayCommand]

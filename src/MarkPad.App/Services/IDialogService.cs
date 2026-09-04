@@ -42,6 +42,8 @@ public interface IDialogService
     /// <summary>Settings page (F-SET-01~05); returns true when the user saved.</summary>
     Task<bool> ShowSettingsAsync();
 
+    Task ShowAboutAsync();
+
     /// <summary>PRD F-EXP-04: put HTML + plain text on the clipboard.</summary>
     void SetClipboardRich(string html, string text);
 

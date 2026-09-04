@@ -469,7 +469,7 @@ FileSystemWatcher → 디바운스 → DocumentVM.OnExternalChange
 - 번들 크기 목표 ≤ 3MB gzip 이전 기준 (Mermaid는 동적 import).
 
 ### 7.4 보안
-- WebView2에서 원격 내비게이션 차단, 스크립트가 있는 인라인 HTML은 DOMPurify로 렌더(편집 불가 raw 블록).
+- WebView2에서 원격 내비게이션 차단, 인라인 HTML은 DOMPurify로 정제해 렌더(`plugins/html-render.ts`: 블록 HTML은 `<div class="mp-html">`에 정제 결과 + 소스 편집 칩, 인라인 태그 조각은 raw 텍스트; 편집은 블록 소스 편집으로만).
 - 원격 이미지 로드는 설정 의존, 기본 허용(PRD).
 - 로그에 문서 내용 미기록.
 

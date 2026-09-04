@@ -22,6 +22,8 @@
   <data name="MenuSidebar.Text" xml:space="preserve"><value>File sidebar (Ctrl+Shift+B)</value></data>
   <data name="MenuToolbar.Text" xml:space="preserve"><value>Hide toolbar (Ctrl+Shift+T)</value></data>
   <data name="MenuReadOnly.Text" xml:space="preserve"><value>Toggle read-only</value></data>
+  <data name="MenuDefaultApp.Text" xml:space="preserve"><value>Set as default app for Markdown…</value></data>
+  <data name="MenuAbout.Text" xml:space="preserve"><value>About MarkPad</value></data>
   <data name="MenuSettings.Text" xml:space="preserve"><value>Settings… (Ctrl+,)</value></data>
 
   <data name="OutlineHeader.Text" xml:space="preserve"><value>Outline</value></data>

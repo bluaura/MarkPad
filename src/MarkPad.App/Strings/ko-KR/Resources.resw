@@ -24,6 +24,8 @@
   <data name="MenuSidebar.Text" xml:space="preserve"><value>파일 사이드바 (Ctrl+Shift+B)</value></data>
   <data name="MenuToolbar.Text" xml:space="preserve"><value>툴바 숨기기 (Ctrl+Shift+T)</value></data>
   <data name="MenuReadOnly.Text" xml:space="preserve"><value>읽기 전용 토글</value></data>
+  <data name="MenuDefaultApp.Text" xml:space="preserve"><value>Markdown 기본 앱 설정…</value></data>
+  <data name="MenuAbout.Text" xml:space="preserve"><value>MarkPad 정보</value></data>
   <data name="MenuSettings.Text" xml:space="preserve"><value>설정… (Ctrl+,)</value></data>
 
   <!-- Panes -->

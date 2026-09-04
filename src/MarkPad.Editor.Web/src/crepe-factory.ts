@@ -9,6 +9,7 @@ import { findPlugin } from './plugins/find'
 import { formatKeymap } from './plugins/format-keymap'
 import { frontmatterPlugin } from './plugins/frontmatter'
 import { highlightPlugin, highlightStringifyHandler } from './plugins/highlight'
+import { htmlRenderView } from './plugins/html-render'
 import { outlinePlugin } from './plugins/outline'
 import { imageAltPlugin } from './plugins/image-alt'
 import { imagePropsPlugin } from './plugins/image-props'
@@ -105,6 +106,7 @@ export function buildCrepe(root: HTMLElement, defaultValue: string, settings: Ed
   crepe.editor.use(findPlugin)
   if (settings.markdown.frontMatter) crepe.editor.use(frontmatterPlugin)
   if (settings.markdown.extHighlight) crepe.editor.use(highlightPlugin)
+  crepe.editor.use(htmlRenderView)
   if (!headless) {
     crepe.editor.use(linkClickPlugin)
     crepe.editor.use(contextBarPlugin)

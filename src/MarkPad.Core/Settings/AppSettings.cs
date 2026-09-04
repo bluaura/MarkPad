@@ -86,6 +86,8 @@ public sealed class UiSettings
     public bool ShowToolbar { get; set; } = true;
     public bool ShowOutline { get; set; }
     public bool ShowFileSidebar { get; set; }
+    /// <summary>T-54: the one-time "set as default app" hint was shown (packaged installs only).</summary>
+    public bool DefaultAppPromptShown { get; set; }
     public WindowPlacement Window { get; set; } = new();
 }
 

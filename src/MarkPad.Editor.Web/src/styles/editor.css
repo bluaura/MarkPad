@@ -338,6 +338,42 @@ body {
 .mp-source-actions button { font: inherit; padding: 4px 10px; border: 1px solid var(--mp-border); border-radius: 4px; background: var(--mp-bg); color: var(--mp-fg); cursor: pointer; }
 .mp-source-actions button:first-child { background: var(--mp-accent); color: #fff; border-color: var(--mp-accent); }
 
+/* ---- inline HTML (sanitized, read-only; source via 블록 소스 편집) ---- */
+.milkdown .ProseMirror .mp-html {
+  position: relative;
+}
+.milkdown .ProseMirror div.mp-html {
+  margin: 0 0 1em;
+  padding: 4px 6px;
+  border-left: 3px solid var(--mp-border);
+}
+.milkdown .ProseMirror .mp-html-content details > summary { cursor: pointer; }
+.milkdown .ProseMirror .mp-html-content table { border-collapse: collapse; }
+.milkdown .ProseMirror .mp-html-content td, .milkdown .ProseMirror .mp-html-content th { border: 1px solid var(--mp-border); padding: 4px 8px; }
+.milkdown .ProseMirror .mp-html-content img { max-width: 100%; }
+.milkdown .ProseMirror .mp-html-inline {
+  font-family: var(--mp-font-mono);
+  font-size: 0.85em;
+  color: var(--mp-fg-muted);
+  background: var(--mp-surface-low);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+.mp-html-chip {
+  font: 11px var(--mp-font-mono);
+  color: var(--mp-fg-muted);
+  background: var(--mp-surface-low);
+  border: 1px solid var(--mp-border);
+  border-radius: 3px;
+  padding: 0 5px;
+  margin-left: 4px;
+  cursor: pointer;
+  opacity: 0.55;
+  vertical-align: middle;
+}
+.mp-html:hover .mp-html-chip { opacity: 1; }
+div.mp-html > .mp-html-chip { position: absolute; top: 2px; right: 4px; margin: 0; }
+
 /* ---- ==highlight== extension (default OFF) ---- */
 .milkdown .ProseMirror mark.mp-highlight {
   background: #fff59d;

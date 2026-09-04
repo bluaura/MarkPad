@@ -84,6 +84,7 @@ public sealed partial class MainWindow : Window, IDialogService
         try
         {
             await ViewModel.OfferRecoveryAsync();
+            await ViewModel.OfferDefaultAppOnceAsync();
         }
         catch (Exception ex)
         {
@@ -406,6 +407,13 @@ public sealed partial class MainWindow : Window, IDialogService
         await _settings.UpdateAsync(dialog.ApplyTo);
         Root.RequestedTheme = _theme.RequestedTheme;
         return true;
+    }
+
+    public async Task ShowAboutAsync()
+    {
+        var editorVersion = (ViewModel.SelectedTab?.Surface as Editing.WebEditorSurface)?.Host.Bridge.EditorVersion;
+        var dialog = new Dialogs.AboutDialog(editorVersion, WebViewEnvironment.InstalledRuntimeVersion()) { XamlRoot = Root.XamlRoot };
+        await dialog.ShowAsync();
     }
 
     public void SetClipboardRich(string html, string text)
