@@ -43,15 +43,14 @@ public partial class App : Application
         _ = WebViewEnvironment.GetAsync();
 
         _window = new MainWindow();
-        _window.Activate();
+        _window.BringToFront(); // Activate() alone can leave the window behind the launching app
 
         // Later activations (Explorer double-click while running) arrive here (ADR-10).
         ActivationService.Start(_window.DispatcherQueue);
-        ActivationService.FilesActivated += files =>
+        ActivationService.Activated += files =>
         {
-            _window.AppWindow.Show();
-            _window.Activate();
-            _ = _window.OpenFilesAsync(files);
+            _window.BringToFront();
+            if (files.Count > 0) _ = _window.OpenFilesAsync(files);
         };
 
         var initial = ActivationService.GetInitialFiles();

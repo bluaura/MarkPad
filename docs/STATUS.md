@@ -1,6 +1,6 @@
 # MarkPad 진행 상태
 
-갱신: 2026-09-05 (커밋 4efefcc, origin/main push·CI 성공) · 검증: `verify.ps1 -Quick` 통과 (tsc, vitest 163/163 + 1 skipped, dotnet build 경고 0, Core xUnit 50)
+갱신: 2026-09-08 (탐색기 활성화 시 창 포그라운드 전환 수정) · 검증: `verify.ps1 -Quick` 통과 (tsc, vitest 163/163 + 1 skipped, dotnet build 경고 0, Core xUnit 50)
 
 ## 진행 중 (최대 1개)
 - 없음. M0~M2 계획 항목(T-01~T-60) 전부 구현·커밋됨. 사용자 검증 대기.
@@ -29,6 +29,7 @@
 | M2 잔여: 확대/축소 단축키, `==highlight==`, 제목 표시줄 메뉴, CI | 2026-09-04 | 5a29b20 | |
 | 인라인 HTML 정제 렌더, T-43 성능 기록, T-54 기본 앱 안내, 정보 대화상자 | 2026-09-05 | fe9c0d2 | M0~M2 완료 |
 | 원격 저장소 push(github.com/bluaura/MarkPad), CI 첫 실행 성공(run 33889893128) | 2026-09-05 | 4efefcc | 워크플로 YAML 콜론 수정 |
+| 활성화 시 창 포그라운드 전환(콜드 스타트·두 번째 실행) | 2026-09-08 | (이 커밋) | `MainWindow.BringToFront()` + `AllowSetForegroundWindow` |
 
 ## M0 검증 결과 요약 (ADR-011 참조)
 - Round-trip diff=0 비율: 103/103 (공개 README; 알려진 한계 1건은 `corpus/roundtrip-known-issues/`)
@@ -37,6 +38,8 @@
 - ARCHITECTURE 부록 A: 7 항목 확인 완료(ADR-011), §4 브릿지 표·§5 canonical 규칙 갱신됨
 
 ## 알게 된 것 (다음 세션이 알아야 할 사실)
+- WinUI 3 `Window.Activate()`만으로는 창이 앞으로 오지 않는다(실측: 실행 후에도 포그라운드가 다른 앱). `ShowWindow(SW_RESTORE)`(최소화 시) + `Activate()` + `SetForegroundWindow()`가 필요하다.
+- 설치본(MSIX)에서 앱이 이미 실행 중일 때의 더블클릭은 두 번째 프로세스 없이 활성화만 전달되어 `AllowSetForegroundWindow`를 호출해 줄 쪽이 없다 → `SetForegroundWindow()`가 거부된다. 포그라운드 스레드에 `AttachThreadInput`으로 붙였다 떼는 폴백이 필요하며, 이 케이스는 개발 exe로는 재현되지 않고 **설치본으로만** 재현된다.
 - GitHub Actions step 이름에 `: `가 들어가면 YAML 오류로 잡이 생성되지 않음 → 따옴표 필수. CI MSIX 아티팩트(168MB)는 `Dependencies/x64/Microsoft.WindowsAppRuntime.2.msix`(132MB)를 포함.
 - 비ASCII가 든 `.ps1`은 반드시 UTF-8 **BOM** 포함으로 저장 — Windows PowerShell 5.1이 BOM 없는 UTF-8을 CP949로 읽어 파싱 오류(`verify.ps1`에서 발생, 2026-09-05 수정).
 - CommunityToolkit.Mvvm 8.4 partial property `[ObservableProperty]`는 `LangVersion=preview` 필요.

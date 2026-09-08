@@ -75,6 +75,44 @@ public sealed partial class MainWindow : Window, IDialogService
 
     public Task OpenFilesAsync(IEnumerable<string> paths) => ViewModel.OpenFilesAsync(paths);
 
+    /// <summary>
+    /// Raises the shell to the foreground for a redirected second launch (ADR-10). <see cref="Window.Activate"/>
+    /// alone only flashes the taskbar button; the redirecting instance hands us the foreground right first
+    /// (<see cref="ActivationService"/>), and we still have to ask Win32 for it.
+    /// </summary>
+    public void BringToFront()
+    {
+        var hwnd = Win32Interop.GetWindowFromWindowId(AppWindow.Id);
+        if (AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized })
+        {
+            ShowWindow(hwnd, SW_RESTORE); // keeps a window that was maximized before minimizing maximized
+        }
+        else
+        {
+            AppWindow.Show(true);
+        }
+        Activate();
+        SetForegroundWindow(hwnd);
+        if (GetForegroundWindow() == hwnd) return;
+
+        // Denied: a file activation delivered to the already-running packaged app arrives without the
+        // foreground right, so Windows only flashes the taskbar button. Attaching our input queue to the
+        // current foreground thread lifts the restriction for the duration of the call.
+        var foreignThread = GetWindowThreadProcessId(GetForegroundWindow(), out _);
+        var ownThread = GetCurrentThreadId();
+        if (foreignThread == 0 || foreignThread == ownThread) return;
+        if (!AttachThreadInput(ownThread, foreignThread, true)) return;
+        try
+        {
+            SetForegroundWindow(hwnd);
+            BringWindowToTop(hwnd);
+        }
+        finally
+        {
+            AttachThreadInput(ownThread, foreignThread, false);
+        }
+    }
+
     // ---------- lifecycle ----------
 
     private async void OnRootLoaded(object sender, RoutedEventArgs e)
@@ -465,4 +503,27 @@ public sealed partial class MainWindow : Window, IDialogService
         Notice.Message = message;
         Notice.IsOpen = true;
     }
+
+    private const int SW_RESTORE = 9;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool BringWindowToTop(IntPtr hWnd);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+    private static extern uint GetCurrentThreadId();
 }

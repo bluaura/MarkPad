@@ -183,7 +183,10 @@ public sealed class Document
 
 #### 활성화·수명주기 (ActivationService)
 1. `Program.Main` 대체: `App` 생성자 전에 `AppInstance.GetCurrent().GetActivatedEventArgs()` 확인 → `FindOrRegisterForKey("MarkPad.Main")` → 현재가 주 인스턴스가 아니면 `RedirectActivationToAsync` 후 종료.
-2. 주 인스턴스: `Activated` 이벤트로 후속 파일 활성화 수신 → `ShellViewModel.OpenFilesAsync(paths)`.
+2. 주 인스턴스: `Activated` 이벤트로 후속 활성화 수신 → `MainWindow.BringToFront()`(창을 앞으로) → 파일이 있으면 `ShellViewModel.OpenFilesAsync(paths)`.
+   - 포그라운드 전환(`MainWindow.BringToFront()`): 최소화 상태면 `ShowWindow(SW_RESTORE)`, 아니면 `AppWindow.Show(true)` → `Activate()` → `SetForegroundWindow()`. `Activate()`만으로는 창이 앞으로 오지 않는다.
+   - 리다이렉트되는 두 번째 인스턴스는 종료 전 `AllowSetForegroundWindow(주 인스턴스 PID)`로 포그라운드 권한을 넘긴다.
+   - **패키지 앱**은 실행 중인 인스턴스에 활성화가 바로 전달되어 권한을 넘겨줄 프로세스가 없다. 이때 `SetForegroundWindow()`가 거부되므로(작업 표시줄만 깜빡임) 현재 포그라운드 스레드에 `AttachThreadInput`으로 입력 큐를 잠시 붙였다가 떼는 폴백을 쓴다. 실측(설치본 더블클릭)으로 이 폴백이 있어야 창이 올라온다.
 3. 명령줄 인자(`MarkPad.exe a.md b.md`)·파일 연결(`FileActivatedEventArgs`)·드래그앤드롭 모두 같은 진입점.
 4. 종료 시: 미저장 탭 확인 대화상자 → 창 위치 저장 → 복구 스냅샷 정리.
 

@@ -15,7 +15,8 @@ public static class ActivationService
     public const string InstanceKey = "MarkPad.Main";
     private static readonly string[] s_openableExtensions = [".md", ".markdown", ".txt"];
 
-    public static event Action<IReadOnlyList<string>>? FilesActivated;
+    /// <summary>Raised on every later activation; the list is empty when no openable file came with it.</summary>
+    public static event Action<IReadOnlyList<string>>? Activated;
 
     /// <summary>Call first thing in Main. Returns true when this process redirected and must exit.</summary>
     public static bool TryRedirectToMainInstance()
@@ -37,8 +38,7 @@ public static class ActivationService
         AppInstance.GetCurrent().Activated += (_, e) =>
         {
             var files = ExtractFiles(e);
-            if (files.Count == 0) return;
-            dispatcher.TryEnqueue(() => FilesActivated?.Invoke(files));
+            dispatcher.TryEnqueue(() => Activated?.Invoke(files));
         };
     }
 
@@ -119,6 +119,9 @@ public static class ActivationService
     // Redirect must not block the STA thread on the async operation (see Windows App SDK sample).
     private static void RedirectActivationTo(AppActivationArguments args, AppInstance target)
     {
+        // Hand our foreground right over to the main instance, otherwise its Activate() is ignored
+        // (Windows only lets the foreground process, or one it named, raise a window).
+        AllowSetForegroundWindow(target.ProcessId);
         var handle = CreateEvent(IntPtr.Zero, true, false, null);
         _ = Task.Run(() =>
         {
@@ -133,6 +136,9 @@ public static class ActivationService
         });
         _ = CoWaitForMultipleObjects(0, 0xFFFFFFFF, 1, [handle], out _);
     }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool AllowSetForegroundWindow(uint dwProcessId);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern IntPtr CreateEvent(IntPtr lpEventAttributes, bool bManualReset, bool bInitialState, string? lpName);
